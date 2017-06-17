@@ -7,16 +7,23 @@ import (
 )
 
 // Body returns a dynamic body invocable.
-func Body(action InvocableAction) Invocable {
-	return &body{action: action}
+func Body(actions ...InvocableAction) Invocable {
+	return &body{actions: actions}
 }
 
 // body wraps a user supplied invocation body.
 type body struct {
-	action InvocableAction
+	actions []InvocableAction
 }
 
 // Invoke applies the invocation.
 func (b *body) Invoke(c *spiffy.Connection, tx *sql.Tx) error {
-	return b.action(c, tx)
+	var err error
+	for _, action := range b.actions {
+		err = action(c, tx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
