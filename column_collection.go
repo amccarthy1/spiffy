@@ -94,28 +94,36 @@ func getCachedColumnCollectionFromType(identifier string, t reflect.Type) *Colum
 	return cachedMeta
 }
 
-// GenerateColumnCollectionForType reflects a new column collection from a reflect.Type.
-func generateColumnCollectionForType(t reflect.Type) *ColumnCollection {
-	for t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	tableName, _ := TableName(t)
+func generateColumnsForType(t reflect.Type, tableName string, absIndex int, cols []Column) []Column {
 	numFields := t.NumField()
 
-	var cols []Column
-	for index := 0; index < numFields; index++ {
-		field := t.Field(index)
-		if !field.Anonymous {
+	for i := 0; i < numFields; i++ {
+		field := t.Field(i)
+		if field.Anonymous {
+			subCols := generateColumnsForType(field.Type, tableName, absIndex, []Column{})
+			cols = append(cols, subCols...)
+			absIndex += len(subCols)
+		} else {
 			col := NewColumnFromFieldTag(field)
 			if col != nil {
-				col.Index = index
+				col.Index = absIndex
 				col.TableName = tableName
 				cols = append(cols, *col)
+				absIndex++
 			}
 		}
 	}
 
+	return cols
+}
+
+// GenerateColumnCollectionForType reflects a new column collection from a reflect.Type.
+func GenerateColumnCollectionForType(t reflect.Type) *ColumnCollection {
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	tableName, _ := TableName(t)
+	cols := generateColumnsForType(t, tableName, 0, []Column{})
 	return newColumnCollectionFromColumns(cols)
 }
 
