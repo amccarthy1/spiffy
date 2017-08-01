@@ -16,6 +16,6 @@ func SetDefault(suite *Suite) {
 }
 
 // Default returns the default migration suite.
-func Default() Migration {
+func Default() *Suite {
 	return defaultSuite
 }
