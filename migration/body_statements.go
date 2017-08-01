@@ -6,7 +6,7 @@ import (
 	"github.com/blendlabs/spiffy"
 )
 
-// BodyStatements is an alias to NewStatement.
+// BodyStatements is an alias to Body(...Statement(stmt))
 func BodyStatements(stmts ...string) Invocable {
 	return bodyStatements(stmts)
 }
@@ -24,4 +24,11 @@ func (bs bodyStatements) Invoke(c *spiffy.Connection, tx *sql.Tx) (err error) {
 		}
 	}
 	return
+}
+
+// Statement returns a single invocable action for a statement.
+func Statement(statement string) InvocableAction {
+	return func(c *spiffy.Connection, tx *sql.Tx) error {
+		return c.ExecInTx(statement, tx)
+	}
 }
