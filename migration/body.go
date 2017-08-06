@@ -6,7 +6,7 @@ import (
 	"github.com/blendlabs/spiffy"
 )
 
-// Body returns a dynamic body invocable.
+// Body returns an invocable of a set of invocable actions.
 func Body(actions ...InvocableAction) Invocable {
 	return &body{actions: actions}
 }

@@ -13,7 +13,7 @@ func New(label string, migrations ...Migration) *Suite {
 	r := &Suite{
 		label: label,
 	}
-	r.addMigrations(migrations...)
+	r.Add(migrations...)
 	return r
 }
 
@@ -27,11 +27,17 @@ type Suite struct {
 	migrations         []Migration
 }
 
-func (s *Suite) addMigrations(migrations ...Migration) {
+// Add adds migrations to the suite.
+func (s *Suite) Add(migrations ...Migration) {
 	for _, m := range migrations {
 		m.SetParent(s)
 		s.migrations = append(s.migrations, m)
 	}
+}
+
+// Clear removes migrations from the suite.
+func (s *Suite) Clear() {
+	s.migrations = []Migration{}
 }
 
 // Label returns a label for the runner.

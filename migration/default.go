@@ -6,7 +6,7 @@ var (
 
 // Register adds a process to the default suite.
 func Register(m ...Migration) error {
-	defaultSuite.addMigrations(m...)
+	defaultSuite.Add(m...)
 	return nil
 }
 
@@ -16,6 +16,6 @@ func SetDefault(suite *Suite) {
 }
 
 // Default returns the default migration suite.
-func Default() Migration {
+func Default() *Suite {
 	return defaultSuite
 }
