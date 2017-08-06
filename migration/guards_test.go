@@ -167,3 +167,33 @@ func TestNotExists(t *testing.T) {
 	assert.Nil(err)
 	assert.True(ne)
 }
+
+func TestGuard(t *testing.T) {
+	assert := assert.New(t)
+	tx, err := spiffy.Default().Begin()
+	assert.Nil(err)
+	defer tx.Rollback()
+
+	tableName := randomName()
+	err = createTestTable(tableName, tx)
+	assert.Nil(err)
+
+	err = insertTestValue(tableName, 4, "test", tx)
+	assert.Nil(err)
+
+	var didRun bool
+	action := Body(func(c *spiffy.Connection, itx *sql.Tx) error {
+		didRun = true
+		return nil
+	})
+
+	err = Guard("test", func(c *spiffy.Connection, itx *sql.Tx) (bool, error) {
+		return c.QueryInTx(fmt.Sprintf("select * from %s", tableName), itx).Any()
+	})(
+		&Operation{body: action},
+		spiffy.Default(),
+		tx,
+	)
+	assert.Nil(err)
+	assert.True(didRun)
+}

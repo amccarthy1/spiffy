@@ -8,14 +8,14 @@ import (
 )
 
 const (
-	// EventFlagMigration is a logger event flag.
-	EventFlagMigration logger.EventFlag = "db.migration"
+	// EventMigration is a logger event flag.
+	EventMigration logger.Event = "db.migration"
 )
 
 // NewLogger returns a new logger instance.
 func NewLogger() *Logger {
-	agent := logger.NewFromEnvironment()
-	agent.EnableEvent(EventFlagMigration)
+	agent := logger.NewFromEnv()
+	agent.EnableEvent(EventMigration)
 	return &Logger{
 		Output: agent,
 	}
@@ -76,7 +76,7 @@ func (l *Logger) Error(m Migration, err error) error {
 // WriteStats writes final stats to output
 func (l *Logger) WriteStats() {
 	l.Output.WriteEventf(
-		EventFlagMigration,
+		EventMigration,
 		logger.ColorWhite,
 		"%s applied %s skipped %s failed",
 		l.colorize(fmt.Sprintf("%d", l.applied), logger.ColorGreen),
@@ -129,7 +129,7 @@ func (l *Logger) write(m Migration, color logger.AnsiColorCode, body string) {
 	}
 
 	l.Output.WriteEventf(
-		EventFlagMigration,
+		EventMigration,
 		logger.ColorWhite,
 		buffer.String(),
 	)

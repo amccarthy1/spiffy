@@ -171,7 +171,7 @@ func (dbc *Connection) Logger() *logger.Agent {
 	return dbc.logger
 }
 
-func (dbc *Connection) fireEvent(flag logger.EventFlag, query string, elapsed time.Duration, err error, optionalQueryLabel ...string) {
+func (dbc *Connection) fireEvent(flag logger.Event, query string, elapsed time.Duration, err error, optionalQueryLabel ...string) {
 	if dbc.logger != nil {
 		var queryLabel string
 		if len(optionalQueryLabel) > 0 {

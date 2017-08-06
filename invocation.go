@@ -885,7 +885,7 @@ func (i *Invocation) closeStatement(err error, stmt *sql.Stmt) error {
 	return err
 }
 
-func (i *Invocation) panicHandler(r interface{}, err error, eventFlag logger.EventFlag, statement string, start time.Time) error {
+func (i *Invocation) panicHandler(r interface{}, err error, eventFlag logger.Event, statement string, start time.Time) error {
 	if r != nil {
 		recoveryException := exception.New(r)
 		return exception.Nest(err, recoveryException)
