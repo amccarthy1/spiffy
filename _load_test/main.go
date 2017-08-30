@@ -62,16 +62,14 @@ func createTable() error {
 	m := migration.New(
 		"create `test_object` table",
 		migration.Step(
-			migration.AlterTable,
-			migration.Body(
+			migration.TableExists("test_object"),
+			migration.BodyStatements(
 				`DROP TABLE IF EXISTS test_object`,
 			),
-			"test_object",
 		),
 		migration.Step(
-			migration.CreateTable,
-			migration.Body("CREATE TABLE test_object (id serial not null, uuid varchar(64) not null, created_utc timestamp not null, updated_utc timestamp, active boolean, name varchar(64), variance float)"),
-			"test_object",
+			migration.TableNotExists("test_object"),
+			migration.BodyStatements("CREATE TABLE test_object (id serial not null, uuid varchar(64) not null, created_utc timestamp not null, updated_utc timestamp, active boolean, name varchar(64), variance float)"),
 		),
 	)
 	return m.Apply(spiffy.Default())
@@ -270,7 +268,7 @@ func main() {
 
 	// default db is used by the migration framework to build the test database
 	// it is not used by the benchmarks.
-	err := spiffy.InitDefault(spiffy.NewConnectionFromEnvironment())
+	err := spiffy.OpenDefault(spiffy.NewFromEnv())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -308,7 +306,7 @@ func main() {
 	fmt.Printf("PGX Elapsed: %v\n", time.Since(pgxStart))
 
 	// do spiffy query
-	uncached := spiffy.NewConnectionFromEnvironment()
+	uncached := spiffy.NewFromEnv()
 	uncached.DisableStatementCache()
 	db, err := uncached.Open()
 	if err != nil {
@@ -326,7 +324,7 @@ func main() {
 	fmt.Printf("Spiffy Elapsed: %v\n", time.Since(spiffyStart))
 
 	// do spiffy query
-	cached := spiffy.NewConnectionFromEnvironment()
+	cached := spiffy.NewFromEnv()
 	cached.EnableStatementCache()
 	db, err = cached.Open()
 	if err != nil {
@@ -344,7 +342,7 @@ func main() {
 
 	// do baseline query
 	baselineStart := time.Now()
-	baseline := spiffy.NewConnectionFromEnvironment()
+	baseline := spiffy.NewFromEnv()
 	db, err = baseline.Open()
 	if err != nil {
 		log.Fatal(err)

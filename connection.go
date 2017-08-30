@@ -34,8 +34,8 @@ const (
 // Connection
 // --------------------------------------------------------------------------------
 
-// NewConnection returns a new DbConnectin.
-func NewConnection() *Connection {
+// New returns a new Connection.
+func New() *Connection {
 	return &Connection{
 		bufferPool:         NewBufferPool(1024),
 		useStatementCache:  false, //doesnt actually help perf, maybe someday.
@@ -44,18 +44,18 @@ func NewConnection() *Connection {
 	}
 }
 
-// NewConnectionWithHost creates a new Connection using current user peer authentication.
-func NewConnectionWithHost(host, dbName string) *Connection {
-	dbc := NewConnection()
+// NewWithHost creates a new Connection using current user peer authentication.
+func NewWithHost(host, dbName string) *Connection {
+	dbc := New()
 	dbc.Host = host
 	dbc.Database = dbName
 	dbc.SSLMode = "disable"
 	return dbc
 }
 
-// NewConnectionWithPassword creates a new connection with SSLMode set to "disable"
-func NewConnectionWithPassword(host, dbName, username, password string) *Connection {
-	dbc := NewConnection()
+// NewWithPassword creates a new connection with SSLMode set to "disable"
+func NewWithPassword(host, dbName, username, password string) *Connection {
+	dbc := New()
 	dbc.Host = host
 	dbc.Database = dbName
 	dbc.Username = username
@@ -64,9 +64,9 @@ func NewConnectionWithPassword(host, dbName, username, password string) *Connect
 	return dbc
 }
 
-// NewConnectionWithSSLMode creates a new connection with all available options (including SSLMode)
-func NewConnectionWithSSLMode(host, dbName, username, password, sslMode string) *Connection {
-	dbc := NewConnection()
+// NewWithSSLMode creates a new connection with all available options (including SSLMode)
+func NewWithSSLMode(host, dbName, username, password, sslMode string) *Connection {
+	dbc := New()
 	dbc.Host = host
 	dbc.Database = dbName
 	dbc.Username = username
@@ -75,9 +75,9 @@ func NewConnectionWithSSLMode(host, dbName, username, password, sslMode string) 
 	return dbc
 }
 
-// NewConnectionFromDSN creates a new connection with SSLMode set to "disable"
-func NewConnectionFromDSN(dsn string) *Connection {
-	dbc := NewConnection()
+// NewFromDSN creates a new connection with SSLMode set to "disable"
+func NewFromDSN(dsn string) *Connection {
+	dbc := New()
 	dbc.DSN = dsn
 	return dbc
 }
@@ -90,7 +90,7 @@ func envVarWithDefault(varName, defaultValue string) string {
 	return defaultValue
 }
 
-// NewConnectionFromEnvironment creates a new db connection from environment variables.
+// NewFromEnv creates a new db connection from environment variables.
 //
 // The environment variable mappings are as follows:
 //	-	DATABSE_URL 	= DSN 	//note that this trumps other vars (!!)
@@ -101,12 +101,12 @@ func envVarWithDefault(varName, defaultValue string) string {
 //	-	DB_USER 		= Username
 //	-	DB_PASSWORD 	= Password
 //	-	DB_SSLMODE 		= SSLMode
-func NewConnectionFromEnvironment() *Connection {
+func NewFromEnv() *Connection {
 	if len(os.Getenv("DATABASE_URL")) > 0 {
-		return NewConnectionFromDSN(os.Getenv("DATABASE_URL"))
+		return NewFromDSN(os.Getenv("DATABASE_URL"))
 	}
 
-	dbc := NewConnection()
+	dbc := New()
 	dbc.Host = envVarWithDefault("DB_HOST", "localhost")
 	dbc.Database = os.Getenv("DB_NAME")
 	dbc.Schema = os.Getenv("DB_SCHEMA")

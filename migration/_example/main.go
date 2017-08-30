@@ -10,7 +10,7 @@ import (
 )
 
 func main() {
-	err := spiffy.OpenDefault(spiffy.NewConnectionFromEnvironment())
+	err := spiffy.OpenDefault(spiffy.NewFromEnv())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -19,13 +19,13 @@ func main() {
 		"create & fill `test_vocab`",
 		migration.Step(
 			migration.TableExists("test_vocab"),
-			migration.Statements(
+			migration.BodyStatements(
 				"DROP TABLE test_vocab",
 			),
 		),
 		migration.Step(
 			migration.TableNotExists("test_vocab"),
-			migration.Statements(
+			migration.BodyStatements(
 				"CREATE TABLE test_vocab (id serial not null, word varchar(32) not null);",
 				"ALTER TABLE test_vocab ADD CONSTRAINT pk_test_vocab_id PRIMARY KEY(id);",
 			),
@@ -44,7 +44,7 @@ func main() {
 		),
 		migration.Step(
 			migration.TableExists("test_vocab"),
-			migration.Statements(
+			migration.BodyStatements(
 				"DROP TABLE test_vocab",
 			),
 		),

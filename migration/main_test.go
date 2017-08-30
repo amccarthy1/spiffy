@@ -10,7 +10,7 @@ import (
 
 // TestMain is the testing entrypoint.
 func TestMain(m *testing.M) {
-	connection := spiffy.NewConnectionFromEnvironment()
+	connection := spiffy.NewFromEnv()
 
 	err := spiffy.OpenDefault(connection)
 	if err != nil {

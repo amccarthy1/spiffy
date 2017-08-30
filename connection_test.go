@@ -13,7 +13,7 @@ import (
 
 func TestNewAunauthenticatedConnection(t *testing.T) {
 	a := assert.New(t)
-	conn := NewConnectionWithHost("test_host", "test_database")
+	conn := NewWithHost("test_host", "test_database")
 	a.Equal("test_host", conn.Host)
 	a.Equal("test_database", conn.Database)
 	str, err := conn.CreatePostgresConnectionString()
@@ -23,7 +23,7 @@ func TestNewAunauthenticatedConnection(t *testing.T) {
 
 func TestNewConnection(t *testing.T) {
 	a := assert.New(t)
-	conn := NewConnectionWithPassword("test_host", "test_database", "test_user", "test_password")
+	conn := NewWithPassword("test_host", "test_database", "test_user", "test_password")
 	a.Equal("test_host", conn.Host)
 	a.Equal("test_database", conn.Database)
 	a.Equal("test_user", conn.Username)
@@ -35,7 +35,7 @@ func TestNewConnection(t *testing.T) {
 
 func TestNewSSLConnection(t *testing.T) {
 	a := assert.New(t)
-	conn := NewConnectionWithSSLMode("test_host", "test_database", "test_user", "test_password", "a good one")
+	conn := NewWithSSLMode("test_host", "test_database", "test_user", "test_password", "a good one")
 	a.Equal("test_host", conn.Host)
 	a.Equal("test_database", conn.Database)
 	a.Equal("test_user", conn.Username)
@@ -49,7 +49,7 @@ func TestNewSSLConnection(t *testing.T) {
 // TestConnectionSanityCheck tests if we can connect to the db, a.k.a., if the underlying driver works.
 func TestConnectionSanityCheck(t *testing.T) {
 	assert := assert.New(t)
-	config := NewConnectionFromEnvironment()
+	config := NewFromEnv()
 	str, err := config.CreatePostgresConnectionString()
 	assert.Nil(err)
 	_, err = sql.Open("postgres", str)
@@ -102,7 +102,7 @@ func TestQuery(t *testing.T) {
 func TestConnectionStatementCacheExecute(t *testing.T) {
 	a := assert.New(t)
 
-	conn := NewConnectionFromEnvironment()
+	conn := NewFromEnv()
 	defer func() {
 		closeErr := conn.Close()
 		a.Nil(closeErr)
@@ -124,7 +124,7 @@ func TestConnectionStatementCacheExecute(t *testing.T) {
 func TestConnectionStatementCacheQuery(t *testing.T) {
 	a := assert.New(t)
 
-	conn := NewConnectionFromEnvironment()
+	conn := NewFromEnv()
 	defer func() {
 		closeErr := conn.Close()
 		a.Nil(closeErr)
@@ -198,7 +198,7 @@ func TestCRUDMethods(t *testing.T) {
 func TestCRUDMethodsCached(t *testing.T) {
 	a := assert.New(t)
 
-	conn := NewConnectionFromEnvironment()
+	conn := NewFromEnv()
 	defer func() {
 		err := conn.Close()
 		a.Nil(err)
@@ -256,7 +256,7 @@ func TestCRUDMethodsCached(t *testing.T) {
 func TestConnectionOpen(t *testing.T) {
 	a := assert.New(t)
 
-	testAlias := NewConnectionFromEnvironment()
+	testAlias := NewFromEnv()
 	db, dbErr := testAlias.Open()
 	a.Nil(dbErr)
 	a.NotNil(db)
@@ -452,7 +452,7 @@ func TestConnectionCreateIfNotExists(t *testing.T) {
 func TestConnectionInvalidatesBadCachedStatements(t *testing.T) {
 	assert := assert.New(t)
 
-	conn := NewConnectionFromEnvironment()
+	conn := NewFromEnv()
 	defer conn.Close()
 
 	conn.EnableStatementCache()
