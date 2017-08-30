@@ -226,8 +226,8 @@ func (dbc *Connection) CreatePostgresConnectionString() (string, error) {
 	return fmt.Sprintf("postgres://%s%s/%s%s", dbc.Host, portSegment, dbc.Database, sslMode), nil
 }
 
-// openNew returns a new connection object.
-func (dbc *Connection) openNew() (*sql.DB, error) {
+// openNewSQLConnection returns a new connection object.
+func (dbc *Connection) openNewSQLConnection() (*sql.DB, error) {
 	connStr, err := dbc.CreatePostgresConnectionString()
 	if err != nil {
 		return nil, err
@@ -249,20 +249,20 @@ func (dbc *Connection) openNew() (*sql.DB, error) {
 }
 
 // Open returns a connection object, either a cached connection object or creating a new one in the process.
-func (dbc *Connection) Open() (*sql.DB, error) {
+func (dbc *Connection) Open() (*Connection, error) {
 	if dbc.Connection == nil {
 		dbc.connectionLock.Lock()
 		defer dbc.connectionLock.Unlock()
 
 		if dbc.Connection == nil {
-			newConn, err := dbc.openNew()
+			newConn, err := dbc.openNewSQLConnection()
 			if err != nil {
 				return nil, exception.Wrap(err)
 			}
 			dbc.Connection = newConn
 		}
 	}
-	return dbc.Connection, nil
+	return dbc, nil
 }
 
 // Begin starts a new transaction.
@@ -296,7 +296,7 @@ func (dbc *Connection) Prepare(statement string, tx *sql.Tx) (*sql.Stmt, error) 
 		return nil, exception.Wrap(err)
 	}
 
-	stmt, err := dbConn.Prepare(statement)
+	stmt, err := dbConn.Connection.Prepare(statement)
 	if err != nil {
 		return nil, exception.Wrap(err)
 	}
@@ -312,7 +312,7 @@ func (dbc *Connection) ensureStatementCache() error {
 			if err != nil {
 				return exception.Wrap(err)
 			}
-			dbc.statementCache = newStatementCache(db)
+			dbc.statementCache = newStatementCache(db.Connection)
 		}
 	}
 	return nil
