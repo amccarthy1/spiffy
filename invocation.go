@@ -106,7 +106,7 @@ func (i *Invocation) Get(object DatabaseMapped, ids ...interface{}) (err error) 
 
 	meta := getCachedColumnCollectionFromInstance(object)
 	standardCols := meta.NotReadOnly()
-	tableName := object.TableName()
+	tableName := TableName(object)
 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_get", tableName)
@@ -196,7 +196,7 @@ func (i *Invocation) GetAll(collection interface{}) (err error) {
 
 	collectionValue := reflectValue(collection)
 	t := reflectSliceType(collection)
-	tableName, _ := TableName(t)
+	tableName := TableNameByType(t)
 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_get_all", tableName)
@@ -283,7 +283,7 @@ func (i *Invocation) Create(object DatabaseMapped) (err error) {
 
 	//NOTE: we're only using one.
 	serials := cols.Serials()
-	tableName := object.TableName()
+	tableName := TableName(object)
 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_create", tableName)
@@ -370,7 +370,7 @@ func (i *Invocation) CreateIfNotExists(object DatabaseMapped) (err error) {
 	//NOTE: we're only using one.
 	serials := cols.Serials()
 	pks := cols.PrimaryKeys()
-	tableName := object.TableName()
+	tableName := TableName(object)
 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_create_if_not_exists", tableName)
@@ -469,10 +469,7 @@ func (i *Invocation) CreateMany(objects interface{}) (err error) {
 	}
 
 	sliceType := reflectSliceType(objects)
-	tableName, err := TableName(sliceType)
-	if err != nil {
-		return
-	}
+	tableName := TableNameByType(sliceType)
 
 	cols := getCachedColumnCollectionFromType(tableName, sliceType)
 	writeCols := cols.NotReadOnly().NotSerials()
@@ -546,7 +543,7 @@ func (i *Invocation) Update(object DatabaseMapped) (err error) {
 	start := time.Now()
 	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
 
-	tableName := object.TableName()
+	tableName := TableName(object)
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_update", tableName)
 	}
@@ -617,7 +614,7 @@ func (i *Invocation) Exists(object DatabaseMapped) (exists bool, err error) {
 	start := time.Now()
 	defer func() { err = i.panicHandler(recover(), err, EventFlagQuery, queryBody, start) }()
 
-	tableName := object.TableName()
+	tableName := TableName(object)
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_exists", tableName)
 	}
@@ -688,7 +685,7 @@ func (i *Invocation) Delete(object DatabaseMapped) (err error) {
 	start := time.Now()
 	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
 
-	tableName := object.TableName()
+	tableName := TableName(object)
 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_delete", tableName)
@@ -755,7 +752,7 @@ func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 
 	serials := cols.Serials()
 	pks := cols.PrimaryKeys()
-	tableName := object.TableName()
+	tableName := TableName(object)
 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_upsert", tableName)
