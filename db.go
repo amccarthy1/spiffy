@@ -16,9 +16,21 @@ func NewDB() *DB {
 // The motivation here is so that if you have datamanager functions they can be
 // used across databases, and don't assume internally which db they talk to.
 type DB struct {
-	conn *Connection
-	tx   *sql.Tx
-	err  error
+	conn       *Connection
+	tx         *sql.Tx
+	err        error
+	fireEvents bool
+}
+
+// FireEvents returns if events are enabled.
+func (db *DB) FireEvents() bool {
+	return db.fireEvents
+}
+
+// WithFireEvents sets the `FireEvents` property.
+func (db *DB) WithFireEvents(flag bool) *DB {
+	db.fireEvents = flag
+	return db
 }
 
 // WithConn sets the connection for the context.
@@ -81,5 +93,5 @@ func (db *DB) Err() error {
 
 // Invoke starts a new invocation.
 func (db *DB) Invoke() *Invocation {
-	return &Invocation{db: db, err: db.err}
+	return &Invocation{db: db, err: db.err, fireEvents: db.fireEvents}
 }

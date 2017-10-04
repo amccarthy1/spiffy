@@ -346,7 +346,7 @@ func (dbc *Connection) DB(dbs ...*DB) *DB {
 	if len(dbs) > 0 {
 		return dbs[0]
 	}
-	return &DB{conn: dbc}
+	return &DB{conn: dbc, fireEvents: dbc.logger != nil}
 }
 
 // InTx is a shortcut for DB().InTx(...).

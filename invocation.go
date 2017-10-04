@@ -23,6 +23,17 @@ type Invocation struct {
 	err            error
 }
 
+// FireEvents returns if events are enabled.
+func (i *Invocation) FireEvents() bool {
+	return i.fireEvents
+}
+
+// WithFireEvents sets the fire events property and returns an invocation.
+func (i *Invocation) WithFireEvents(flag bool) *Invocation {
+	i.fireEvents = flag
+	return i
+}
+
 // Err returns the context's error.
 func (i *Invocation) Err() error {
 	return i.err
