@@ -36,7 +36,7 @@ func TableNameByType(t reflect.Type) string {
 	if typed, isTyped := instance.(TableNameProvider); isTyped {
 		return typed.TableName()
 	}
-	return strings.ToLower(t.String())
+	return strings.ToLower(t.Name())
 }
 
 // TableName returns the mapped table name for a given instance; it will sniff for the `TableName()` function on the type.
@@ -44,7 +44,7 @@ func TableName(obj DatabaseMapped) string {
 	if typed, isTyped := obj.(TableNameProvider); isTyped {
 		return typed.TableName()
 	}
-	return strings.ToLower(reflect.TypeOf(obj).String())
+	return strings.ToLower(reflect.TypeOf(obj).Name())
 }
 
 // --------------------------------------------------------------------------------

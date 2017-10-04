@@ -48,3 +48,24 @@ func TestMakeSliceOfType(t *testing.T) {
 	a.Nil(allErr)
 	a.NotEmpty(*sliceOfT)
 }
+
+type SimpleType struct {
+	ID   int
+	Name string
+}
+
+type SimpleTypeWithName struct {
+	ID   int
+	Name string
+}
+
+func (st SimpleTypeWithName) TableName() string {
+	return "not_simple_type_with_name"
+}
+
+func TestTableName(t *testing.T) {
+	assert := assert.New(t)
+
+	assert.Equal("simpletype", TableName(SimpleType{}))
+	assert.Equal("not_simple_type_with_name", TableName(SimpleTypeWithName{}))
+}
