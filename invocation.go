@@ -74,7 +74,7 @@ func (i *Invocation) Exec(statement string, args ...interface{}) (err error) {
 	}
 
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, statement, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, statement, start) }()
 
 	stmt, stmtErr := i.Prepare(statement)
 	if stmtErr != nil {
@@ -107,13 +107,12 @@ func (i *Invocation) Get(object DatabaseMapped, ids ...interface{}) (err error) 
 		return
 	}
 
-	var queryBody string
-	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagQuery, queryBody, start) }()
-
 	if ids == nil {
 		return exception.New("invalid `ids` parameter.")
 	}
+
+	var queryBody string
+	start := time.Now()
 
 	meta := getCachedColumnCollectionFromInstance(object)
 	standardCols := meta.NotReadOnly()
@@ -122,6 +121,8 @@ func (i *Invocation) Get(object DatabaseMapped, ids ...interface{}) (err error) 
 	if len(i.statementLabel) == 0 {
 		i.statementLabel = fmt.Sprintf("%s_get", tableName)
 	}
+
+	defer func() { err = i.finalizer(recover(), err, EventFlagQuery, queryBody, start) }()
 
 	columnNames := standardCols.ColumnNames()
 	pks := standardCols.PrimaryKeys()
@@ -203,7 +204,7 @@ func (i *Invocation) GetAll(collection interface{}) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagQuery, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagQuery, queryBody, start) }()
 
 	collectionValue := reflectValue(collection)
 	t := reflectSliceType(collection)
@@ -287,7 +288,7 @@ func (i *Invocation) Create(object DatabaseMapped) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
 
 	cols := getCachedColumnCollectionFromInstance(object)
 	writeCols := cols.NotReadOnly().NotSerials()
@@ -373,7 +374,7 @@ func (i *Invocation) CreateIfNotExists(object DatabaseMapped) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
 
 	cols := getCachedColumnCollectionFromInstance(object)
 	writeCols := cols.NotReadOnly().NotSerials()
@@ -472,7 +473,7 @@ func (i *Invocation) CreateMany(objects interface{}) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
 
 	sliceValue := reflectValue(objects)
 	if sliceValue.Len() == 0 {
@@ -552,7 +553,7 @@ func (i *Invocation) Update(object DatabaseMapped) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
 
 	tableName := TableName(object)
 	if len(i.statementLabel) == 0 {
@@ -623,7 +624,7 @@ func (i *Invocation) Exists(object DatabaseMapped) (exists bool, err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagQuery, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagQuery, queryBody, start) }()
 
 	tableName := TableName(object)
 	if len(i.statementLabel) == 0 {
@@ -694,7 +695,7 @@ func (i *Invocation) Delete(object DatabaseMapped) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
 
 	tableName := TableName(object)
 
@@ -754,7 +755,7 @@ func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 
 	var queryBody string
 	start := time.Now()
-	defer func() { err = i.panicHandler(recover(), err, EventFlagExecute, queryBody, start) }()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
 
 	cols := getCachedColumnCollectionFromInstance(object)
 	writeCols := cols.NotReadOnly().NotSerials()
@@ -889,17 +890,17 @@ func (i *Invocation) closeStatement(err error, stmt *sql.Stmt) error {
 			return exception.Nest(err, closeErr)
 		}
 	}
-	i.statementLabel = ""
 	return err
 }
 
-func (i *Invocation) panicHandler(r interface{}, err error, eventFlag logger.Event, statement string, start time.Time) error {
+func (i *Invocation) finalizer(r interface{}, err error, eventFlag logger.Event, statement string, start time.Time) error {
 	if r != nil {
 		recoveryException := exception.New(r)
-		return exception.Nest(err, recoveryException)
+		err = exception.Nest(err, recoveryException)
 	}
 	if i.fireEvents {
 		i.db.conn.fireEvent(eventFlag, statement, time.Now().Sub(start), err, i.statementLabel)
 	}
+	i.statementLabel = ""
 	return err
 }
