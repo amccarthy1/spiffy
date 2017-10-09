@@ -416,6 +416,42 @@ func TestConnectionCreateMany(t *testing.T) {
 	assert.NotEmpty(verify)
 }
 
+func TestConnectionTruncate(t *testing.T) {
+	assert := assert.New(t)
+	tx, err := Default().Begin()
+	assert.Nil(err)
+	defer tx.Rollback()
+
+	err = createTable(tx)
+	assert.Nil(err)
+
+	var objects []DatabaseMapped
+	for x := 0; x < 10; x++ {
+		objects = append(objects, benchObj{
+			Name:      fmt.Sprintf("test_object_%d", x),
+			Timestamp: time.Now().UTC(),
+			Amount:    1005.0,
+			Pending:   true,
+			Category:  fmt.Sprintf("category_%d", x),
+		})
+	}
+
+	err = Default().CreateManyInTx(objects, tx)
+	assert.Nil(err)
+
+	var count int
+	err = Default().QueryInTx(`select count(*) from bench_object`, tx).Scan(&count)
+	assert.Nil(err)
+	assert.NotZero(count)
+
+	err = Default().TruncateInTx(benchObj{}, tx)
+	assert.Nil(err)
+
+	err = Default().QueryInTx(`select count(*) from bench_object`, tx).Scan(&count)
+	assert.Nil(err)
+	assert.Zero(count)
+}
+
 func TestConnectionCreateIfNotExists(t *testing.T) {
 	assert := assert.New(t)
 	tx, err := Default().Begin()

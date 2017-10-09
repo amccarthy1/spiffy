@@ -746,6 +746,44 @@ func (i *Invocation) Delete(object DatabaseMapped) (err error) {
 	return
 }
 
+// Truncate completely empties a table in a single command.
+func (i *Invocation) Truncate(object DatabaseMapped) (err error) {
+	err = i.check()
+	if err != nil {
+		return
+	}
+
+	var queryBody string
+	start := time.Now()
+	defer func() { err = i.finalizer(recover(), err, EventFlagExecute, queryBody, start) }()
+
+	tableName := TableName(object)
+
+	if len(i.statementLabel) == 0 {
+		i.statementLabel = fmt.Sprintf("%s_truncate", tableName)
+	}
+
+	queryBodyBuffer := i.db.conn.bufferPool.Get()
+	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+
+	queryBodyBuffer.WriteString("TRUNCATE ")
+	queryBodyBuffer.WriteString(tableName)
+
+	queryBody = queryBodyBuffer.String()
+	stmt, stmtErr := i.Prepare(queryBody)
+	if stmtErr != nil {
+		err = exception.Wrap(stmtErr)
+		return
+	}
+	defer func() { err = i.closeStatement(err, stmt) }()
+	_, execErr := stmt.Exec()
+	if execErr != nil {
+		err = exception.Wrap(execErr)
+		i.invalidateCachedStatement()
+	}
+	return
+}
+
 // Upsert inserts the object if it doesn't exist already (as defined by its primary keys) or updates it wrapped in a transaction.
 func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 	err = i.check()

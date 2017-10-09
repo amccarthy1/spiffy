@@ -477,3 +477,13 @@ func (dbc *Connection) Upsert(object DatabaseMapped) error {
 func (dbc *Connection) UpsertInTx(object DatabaseMapped, tx *sql.Tx) (err error) {
 	return dbc.DB().InTx(tx).Invoke().Upsert(object)
 }
+
+// Truncate fully removes an tables rows in a single opertation.
+func (dbc *Connection) Truncate(object DatabaseMapped) error {
+	return dbc.TruncateInTx(object, nil)
+}
+
+// TruncateInTx applies a truncation in a transaction.
+func (dbc *Connection) TruncateInTx(object DatabaseMapped, tx *sql.Tx) error {
+	return dbc.DB().InTx(tx).Invoke().Truncate(object)
+}
