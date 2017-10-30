@@ -8,8 +8,11 @@ import (
 )
 
 const (
-	// EventMigration is a logger event flag.
-	EventMigration logger.Event = "db.migration"
+	// Event is a logger event flag.
+	Event logger.Event = "db.migration"
+
+	// EventMigration is a legacy alias for `Event`.
+	EventMigration = Event
 )
 
 // NewLogger returns a new logger instance.
