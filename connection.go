@@ -351,7 +351,7 @@ func (dbc *Connection) DB(dbs ...*DB) *DB {
 
 // InTx is a shortcut for DB().InTx(...).
 func (dbc *Connection) InTx(txs ...*sql.Tx) *DB {
-	return &DB{conn: dbc, tx: OptionalTx(txs...)}
+	return &DB{conn: dbc, tx: OptionalTx(txs...), fireEvents: dbc.logger != nil}
 }
 
 // --------------------------------------------------------------------------------
