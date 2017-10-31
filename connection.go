@@ -241,8 +241,13 @@ func (dbc *Connection) openNewSQLConnection() (*sql.DB, error) {
 	if len(dbc.Schema) > 0 {
 		_, err = dbConn.Exec(fmt.Sprintf("SET search_path TO %s,public;", dbc.Schema))
 		if err != nil {
-			return nil, err
+			return nil, exception.Wrap(err)
 		}
+	}
+
+	_, err = dbConn.Exec("select 'ok!'")
+	if err != nil {
+		return nil, exception.Wrap(err)
 	}
 
 	return dbConn, nil
