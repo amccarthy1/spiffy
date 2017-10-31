@@ -91,7 +91,7 @@ func (q *Query) Execute() (stmt *sql.Stmt, rows *sql.Rows, err error) {
 
 // Any returns if there are any results for the query.
 func (q *Query) Any() (hasRows bool, err error) {
-	defer func() { err = q.panicHandler(recover(), err) }()
+	defer func() { err = q.finalizer(recover(), err) }()
 
 	q.stmt, q.rows, q.err = q.Execute()
 	if q.err != nil {
@@ -113,7 +113,7 @@ func (q *Query) Any() (hasRows bool, err error) {
 
 // None returns if there are no results for the query.
 func (q *Query) None() (hasRows bool, err error) {
-	defer func() { err = q.panicHandler(recover(), err) }()
+	defer func() { err = q.finalizer(recover(), err) }()
 
 	q.stmt, q.rows, q.err = q.Execute()
 
@@ -136,7 +136,7 @@ func (q *Query) None() (hasRows bool, err error) {
 
 // Scan writes the results to a given set of local variables.
 func (q *Query) Scan(args ...interface{}) (err error) {
-	defer func() { err = q.panicHandler(recover(), err) }()
+	defer func() { err = q.finalizer(recover(), err) }()
 
 	q.stmt, q.rows, q.err = q.Execute()
 	if q.err != nil {
@@ -162,7 +162,7 @@ func (q *Query) Scan(args ...interface{}) (err error) {
 
 // Out writes the query result to a single object via. reflection mapping.
 func (q *Query) Out(object interface{}) (err error) {
-	defer func() { err = q.panicHandler(recover(), err) }()
+	defer func() { err = q.finalizer(recover(), err) }()
 
 	q.stmt, q.rows, q.err = q.Execute()
 	if q.err != nil {
@@ -201,7 +201,7 @@ func (q *Query) Out(object interface{}) (err error) {
 
 // OutMany writes the query results to a slice of objects.
 func (q *Query) OutMany(collection interface{}) (err error) {
-	defer func() { err = q.panicHandler(recover(), err) }()
+	defer func() { err = q.finalizer(recover(), err) }()
 
 	q.stmt, q.rows, q.err = q.Execute()
 	if q.err != nil {
@@ -257,7 +257,7 @@ func (q *Query) OutMany(collection interface{}) (err error) {
 
 // Each writes the query results to a slice of objects.
 func (q *Query) Each(consumer RowsConsumer) (err error) {
-	defer func() { err = q.panicHandler(recover(), err) }()
+	defer func() { err = q.finalizer(recover(), err) }()
 
 	q.stmt, q.rows, q.err = q.Execute()
 	if q.err != nil {
@@ -283,7 +283,7 @@ func (q *Query) Each(consumer RowsConsumer) (err error) {
 // helpers
 // --------------------------------------------------------------------------------
 
-func (q *Query) panicHandler(r interface{}, err error) error {
+func (q *Query) finalizer(r interface{}, err error) error {
 	if r != nil {
 		recoveryException := exception.New(r)
 		err = exception.Nest(err, recoveryException)
@@ -293,7 +293,9 @@ func (q *Query) panicHandler(r interface{}, err error) error {
 		err = exception.Nest(err, closeErr)
 	}
 
-	q.db.conn.fireEvent(EventFlagQuery, q.statement, time.Since(q.start), err, q.statementLabel)
+	if q.db.fireEvents {
+		q.db.conn.fireEvent(EventFlagQuery, q.statement, time.Since(q.start), err, q.statementLabel)
+	}
 	return err
 }
 
