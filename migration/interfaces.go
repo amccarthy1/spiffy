@@ -10,12 +10,15 @@ import (
 type Migration interface {
 	Label() string
 	SetLabel(label string)
+	WithLabel(label string) Migration
 
 	Parent() Migration
 	SetParent(parent Migration)
+	WithParent(parent Migration) Migration
 
 	Logger() *Logger
 	SetLogger(logger *Logger)
+	WithLogger(logger *Logger) Migration
 
 	IsTransactionIsolated() bool
 

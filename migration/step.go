@@ -33,6 +33,12 @@ func (o *Operation) SetLabel(label string) {
 	o.label = label
 }
 
+// WithLabel sets the operation label.
+func (o *Operation) WithLabel(label string) Migration {
+	o.label = label
+	return o
+}
+
 // Parent returns the parent.
 func (o *Operation) Parent() Migration {
 	return o.parent
@@ -43,6 +49,12 @@ func (o *Operation) SetParent(parent Migration) {
 	o.parent = parent
 }
 
+// WithParent sets the operation parent.
+func (o *Operation) WithParent(parent Migration) Migration {
+	o.parent = parent
+	return o
+}
+
 // Logger returns the logger
 func (o *Operation) Logger() *Logger {
 	return o.logger
@@ -51,6 +63,12 @@ func (o *Operation) Logger() *Logger {
 // SetLogger implements the migration method `SetLogger`.
 func (o *Operation) SetLogger(logger *Logger) {
 	o.logger = logger
+}
+
+// WithLogger implements the migration method `WithLogger`.
+func (o *Operation) WithLogger(logger *Logger) Migration {
+	o.logger = logger
+	return o
 }
 
 // IsTransactionIsolated returns if this migration requires its own transaction.

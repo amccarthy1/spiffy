@@ -50,6 +50,12 @@ func (s *Suite) SetLabel(value string) {
 	s.label = value
 }
 
+// WithLabel sets the migration label.
+func (s *Suite) WithLabel(value string) Migration {
+	s.label = value
+	return s
+}
+
 // IsRoot denotes if the runner is the root runner (or not).
 func (s *Suite) IsRoot() bool {
 	return s.parent == nil
@@ -63,6 +69,12 @@ func (s *Suite) Parent() Migration {
 // SetParent sets the runner's parent.
 func (s *Suite) SetParent(parent Migration) {
 	s.parent = parent
+}
+
+// WithParent sets the runner's parent.
+func (s *Suite) WithParent(parent Migration) Migration {
+	s.parent = parent
+	return s
 }
 
 // ShouldAbortOnError indicates that the runner will abort if it sees an error from a step.
@@ -83,6 +95,12 @@ func (s *Suite) Logger() *Logger {
 // SetLogger sets the logger the Runner should use.
 func (s *Suite) SetLogger(logger *Logger) {
 	s.logger = logger
+}
+
+// WithLogger sets the logger the Runner should use.
+func (s *Suite) WithLogger(logger *Logger) Migration {
+	s.logger = logger
+	return s
 }
 
 // IsTransactionIsolated returns if the migration is transaction isolated.
