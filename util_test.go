@@ -67,5 +67,7 @@ func TestTableName(t *testing.T) {
 	assert := assert.New(t)
 
 	assert.Equal("simpletype", TableName(SimpleType{}))
+	assert.Equal("simpletype", TableName(&SimpleType{}))
 	assert.Equal("not_simple_type_with_name", TableName(SimpleTypeWithName{}))
+	assert.Equal("not_simple_type_with_name", TableName(&SimpleTypeWithName{}))
 }

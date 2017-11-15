@@ -44,7 +44,7 @@ func TableName(obj DatabaseMapped) string {
 	if typed, isTyped := obj.(TableNameProvider); isTyped {
 		return typed.TableName()
 	}
-	return strings.ToLower(reflect.TypeOf(obj).Name())
+	return strings.ToLower(reflectType(obj).Name())
 }
 
 // --------------------------------------------------------------------------------
