@@ -169,7 +169,7 @@ func TestCRUDMethods(t *testing.T) {
 	sampleObj := all[0]
 
 	getTest := benchObj{}
-	getTestErr := Default().GetByIDInTx(&getTest, tx, sampleObj.ID)
+	getTestErr := Default().GetInTx(&getTest, tx, sampleObj.ID)
 	a.Nil(getTestErr)
 	a.Equal(sampleObj.ID, getTest.ID)
 
@@ -183,7 +183,7 @@ func TestCRUDMethods(t *testing.T) {
 	a.Nil(updateErr)
 
 	verify := benchObj{}
-	verifyErr := Default().GetByIDInTx(&verify, tx, getTest.ID)
+	verifyErr := Default().GetInTx(&verify, tx, getTest.ID)
 	a.Nil(verifyErr)
 	a.Equal(getTest.Name, verify.Name)
 
@@ -191,7 +191,7 @@ func TestCRUDMethods(t *testing.T) {
 	a.Nil(deleteErr)
 
 	delVerify := benchObj{}
-	delVerifyErr := Default().GetByIDInTx(&delVerify, tx, getTest.ID)
+	delVerifyErr := Default().GetInTx(&delVerify, tx, getTest.ID)
 	a.Nil(delVerifyErr)
 }
 
@@ -227,7 +227,7 @@ func TestCRUDMethodsCached(t *testing.T) {
 	sampleObj := all[0]
 
 	getTest := benchObj{}
-	getTestErr := Default().GetByIDInTx(&getTest, tx, sampleObj.ID)
+	getTestErr := Default().GetInTx(&getTest, tx, sampleObj.ID)
 	a.Nil(getTestErr)
 	a.Equal(sampleObj.ID, getTest.ID)
 
@@ -241,7 +241,7 @@ func TestCRUDMethodsCached(t *testing.T) {
 	a.Nil(updateErr)
 
 	verify := benchObj{}
-	verifyErr := Default().GetByIDInTx(&verify, tx, getTest.ID)
+	verifyErr := Default().GetInTx(&verify, tx, getTest.ID)
 	a.Nil(verifyErr)
 	a.Equal(getTest.Name, verify.Name)
 
@@ -249,7 +249,7 @@ func TestCRUDMethodsCached(t *testing.T) {
 	a.Nil(deleteErr)
 
 	delVerify := benchObj{}
-	delVerifyErr := Default().GetByIDInTx(&delVerify, tx, getTest.ID)
+	delVerifyErr := Default().GetInTx(&delVerify, tx, getTest.ID)
 	a.Nil(delVerifyErr)
 }
 
@@ -337,7 +337,7 @@ func TestConnectionUpsert(t *testing.T) {
 	assert.Nil(err)
 
 	var verify upsertObj
-	err = Default().GetByIDInTx(&verify, tx, obj.UUID)
+	err = Default().GetInTx(&verify, tx, obj.UUID)
 	assert.Nil(err)
 	assert.Equal(obj.Category, verify.Category)
 
@@ -346,7 +346,7 @@ func TestConnectionUpsert(t *testing.T) {
 	err = Default().UpsertInTx(obj, tx)
 	assert.Nil(err)
 
-	err = Default().GetByIDInTx(&verify, tx, obj.UUID)
+	err = Default().GetInTx(&verify, tx, obj.UUID)
 	assert.Nil(err)
 	assert.Equal(obj.Category, verify.Category)
 }
@@ -372,7 +372,7 @@ func TestConnectionUpsertWithSerial(t *testing.T) {
 	assert.NotZero(obj.ID)
 
 	var verify benchObj
-	err = Default().GetByIDInTx(&verify, tx, obj.ID)
+	err = Default().GetInTx(&verify, tx, obj.ID)
 	assert.Nil(err)
 	assert.Equal(obj.Category, verify.Category)
 
@@ -382,7 +382,7 @@ func TestConnectionUpsertWithSerial(t *testing.T) {
 	assert.Nil(err)
 	assert.NotZero(obj.ID)
 
-	err = Default().GetByIDInTx(&verify, tx, obj.ID)
+	err = Default().GetInTx(&verify, tx, obj.ID)
 	assert.Nil(err)
 	assert.Equal(obj.Category, verify.Category)
 }
@@ -470,7 +470,7 @@ func TestConnectionCreateIfNotExists(t *testing.T) {
 	assert.Nil(err)
 
 	var verify upsertObj
-	err = Default().GetByIDInTx(&verify, tx, obj.UUID)
+	err = Default().GetInTx(&verify, tx, obj.UUID)
 	assert.Nil(err)
 	assert.Equal(obj.Category, verify.Category)
 
@@ -480,7 +480,7 @@ func TestConnectionCreateIfNotExists(t *testing.T) {
 	err = Default().CreateIfNotExistsInTx(obj, tx)
 	assert.Nil(err)
 
-	err = Default().GetByIDInTx(&verify, tx, obj.UUID)
+	err = Default().GetInTx(&verify, tx, obj.UUID)
 	assert.Nil(err)
 	assert.Equal(oldCategory, verify.Category)
 }
