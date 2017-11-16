@@ -401,13 +401,13 @@ func (dbc *Connection) QueryInTx(statement string, tx *sql.Tx, args ...interface
 	return dbc.Invoke(tx).Query(statement, args...)
 }
 
-// GetByID returns a given object based on a group of primary key ids.
-func (dbc *Connection) GetByID(object DatabaseMapped, ids ...interface{}) error {
-	return dbc.GetByIDInTx(object, nil, ids...)
+// Get returns a given object based on a group of primary key ids.
+func (dbc *Connection) Get(object DatabaseMapped, ids ...interface{}) error {
+	return dbc.GetInTx(object, nil, ids...)
 }
 
-// GetByIDInTx returns a given object based on a group of primary key ids within a transaction.
-func (dbc *Connection) GetByIDInTx(object DatabaseMapped, tx *sql.Tx, args ...interface{}) error {
+// GetInTx returns a given object based on a group of primary key ids within a transaction.
+func (dbc *Connection) GetInTx(object DatabaseMapped, tx *sql.Tx, args ...interface{}) error {
 	return dbc.Invoke(tx).Get(object, args...)
 }
 
