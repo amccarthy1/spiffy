@@ -21,9 +21,11 @@ type Query struct {
 	start time.Time
 	rows  *sql.Rows
 
-	stmt *sql.Stmt
-	db   *DB
-	err  error
+	stmt       *sql.Stmt
+	fireEvents bool
+	conn       *Connection
+	tx         *sql.Tx
+	err        error
 }
 
 // Close closes and releases any resources retained by the QueryResult.
@@ -36,7 +38,7 @@ func (q *Query) Close() error {
 		q.rows = nil
 	}
 
-	if !q.db.conn.useStatementCache {
+	if !q.conn.useStatementCache {
 		if q.stmt != nil {
 			stmtErr = q.stmt.Close()
 			q.stmt = nil
@@ -55,14 +57,14 @@ func (q *Query) CachedAs(cacheLabel string) *Query {
 func (q *Query) Execute() (stmt *sql.Stmt, rows *sql.Rows, err error) {
 	var stmtErr error
 	if q.shouldCacheStatement() {
-		stmt, stmtErr = q.db.conn.PrepareCached(q.statementLabel, q.statement, q.db.tx)
+		stmt, stmtErr = q.conn.PrepareCached(q.statementLabel, q.statement, q.tx)
 	} else {
-		stmt, stmtErr = q.db.conn.Prepare(q.statement, q.db.tx)
+		stmt, stmtErr = q.conn.Prepare(q.statement, q.tx)
 	}
 
 	if stmtErr != nil {
 		if q.shouldCacheStatement() {
-			q.db.conn.statementCache.InvalidateStatement(q.statementLabel)
+			q.conn.statementCache.InvalidateStatement(q.statementLabel)
 		}
 		err = exception.Wrap(stmtErr)
 		return
@@ -70,7 +72,7 @@ func (q *Query) Execute() (stmt *sql.Stmt, rows *sql.Rows, err error) {
 
 	defer func() {
 		if r := recover(); r != nil {
-			if q.db.conn.useStatementCache {
+			if q.conn.useStatementCache {
 				err = exception.Nest(err, exception.New(r))
 			} else {
 				err = exception.Nest(err, exception.New(r), stmt.Close())
@@ -82,7 +84,7 @@ func (q *Query) Execute() (stmt *sql.Stmt, rows *sql.Rows, err error) {
 	rows, queryErr = stmt.Query(q.args...)
 	if queryErr != nil {
 		if q.shouldCacheStatement() {
-			q.db.conn.statementCache.InvalidateStatement(q.statementLabel)
+			q.conn.statementCache.InvalidateStatement(q.statementLabel)
 		}
 		err = exception.Wrap(queryErr)
 	}
@@ -293,12 +295,12 @@ func (q *Query) finalizer(r interface{}, err error) error {
 		err = exception.Nest(err, closeErr)
 	}
 
-	if q.db.fireEvents {
-		q.db.conn.fireEvent(EventFlagQuery, q.statement, time.Since(q.start), err, q.statementLabel)
+	if q.fireEvents {
+		q.conn.fireEvent(EventFlagQuery, q.statement, time.Since(q.start), err, q.statementLabel)
 	}
 	return err
 }
 
 func (q *Query) shouldCacheStatement() bool {
-	return q.db.conn.useStatementCache && len(q.statementLabel) > 0
+	return q.conn.useStatementCache && len(q.statementLabel) > 0
 }

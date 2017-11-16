@@ -17,7 +17,8 @@ const (
 
 // Invocation is a specific operation against a context.
 type Invocation struct {
-	db             *DB
+	conn           *Connection
+	tx             *sql.Tx
 	fireEvents     bool
 	statementLabel string
 	err            error
@@ -52,7 +53,7 @@ func (i *Invocation) Label() string {
 
 // Tx returns the underlying transaction.
 func (i *Invocation) Tx() *sql.Tx {
-	return i.db.tx
+	return i.tx
 }
 
 // Prepare returns a cached or newly prepared statment plan for a given sql statement.
@@ -61,9 +62,9 @@ func (i *Invocation) Prepare(statement string) (*sql.Stmt, error) {
 		return nil, i.err
 	}
 	if len(i.statementLabel) > 0 {
-		return i.db.conn.PrepareCached(i.statementLabel, statement, i.db.tx)
+		return i.conn.PrepareCached(i.statementLabel, statement, i.tx)
 	}
-	return i.db.conn.Prepare(statement, i.db.tx)
+	return i.conn.Prepare(statement, i.tx)
 }
 
 // Exec executes a sql statement with a given set of arguments.
@@ -97,7 +98,7 @@ func (i *Invocation) Exec(statement string, args ...interface{}) (err error) {
 
 // Query returns a new query object for a given sql query and arguments.
 func (i *Invocation) Query(query string, args ...interface{}) *Query {
-	return &Query{statement: query, args: args, start: time.Now(), db: i.db, err: i.check(), statementLabel: i.statementLabel}
+	return &Query{statement: query, args: args, start: time.Now(), conn: i.conn, tx: i.tx, fireEvents: i.fireEvents, err: i.check(), statementLabel: i.statementLabel}
 }
 
 // Get returns a given object based on a group of primary key ids within a transaction.
@@ -131,8 +132,8 @@ func (i *Invocation) Get(object DatabaseMapped, ids ...interface{}) (err error) 
 		return
 	}
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("SELECT ")
 	for i, name := range columnNames {
@@ -218,8 +219,8 @@ func (i *Invocation) GetAll(collection interface{}) (err error) {
 
 	columnNames := meta.ColumnNames()
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("SELECT ")
 	for i, name := range columnNames {
@@ -304,8 +305,8 @@ func (i *Invocation) Create(object DatabaseMapped) (err error) {
 	colNames := writeCols.ColumnNames()
 	colValues := writeCols.ColumnValues(object)
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("INSERT INTO ")
 	queryBodyBuffer.WriteString(tableName)
@@ -391,8 +392,8 @@ func (i *Invocation) CreateIfNotExists(object DatabaseMapped) (err error) {
 	colNames := writeCols.ColumnNames()
 	colValues := writeCols.ColumnValues(object)
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("INSERT INTO ")
 	queryBodyBuffer.WriteString(tableName)
@@ -490,8 +491,8 @@ func (i *Invocation) CreateMany(objects interface{}) (err error) {
 	//serials := cols.Serials()
 	colNames := writeCols.ColumnNames()
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("INSERT INTO ")
 	queryBodyBuffer.WriteString(tableName)
@@ -567,8 +568,8 @@ func (i *Invocation) Update(object DatabaseMapped) (err error) {
 	updateValues := updateCols.ColumnValues(object)
 	numColumns := writeCols.Len()
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("UPDATE ")
 	queryBodyBuffer.WriteString(tableName)
@@ -639,8 +640,8 @@ func (i *Invocation) Exists(object DatabaseMapped) (exists bool, err error) {
 		return
 	}
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("SELECT 1 FROM ")
 	queryBodyBuffer.WriteString(tableName)
@@ -711,8 +712,8 @@ func (i *Invocation) Delete(object DatabaseMapped) (err error) {
 		return
 	}
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("DELETE FROM ")
 	queryBodyBuffer.WriteString(tableName)
@@ -763,8 +764,8 @@ func (i *Invocation) Truncate(object DatabaseMapped) (err error) {
 		i.statementLabel = fmt.Sprintf("%s_truncate", tableName)
 	}
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("TRUNCATE ")
 	queryBodyBuffer.WriteString(tableName)
@@ -811,8 +812,8 @@ func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 	colNames := writeCols.ColumnNames()
 	colValues := writeCols.ColumnValues(object)
 
-	queryBodyBuffer := i.db.conn.bufferPool.Get()
-	defer i.db.conn.bufferPool.Put(queryBodyBuffer)
+	queryBodyBuffer := i.conn.bufferPool.Get()
+	defer i.conn.bufferPool.Put(queryBodyBuffer)
 
 	queryBodyBuffer.WriteString("INSERT INTO ")
 	queryBodyBuffer.WriteString(tableName)
@@ -903,10 +904,7 @@ func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 // --------------------------------------------------------------------------------
 
 func (i *Invocation) check() error {
-	if i.db == nil {
-		return exception.Newf(connectionErrorMessage)
-	}
-	if i.db.conn == nil {
+	if i.conn == nil {
 		return exception.Newf(connectionErrorMessage)
 	}
 	if i.err != nil {
@@ -916,13 +914,13 @@ func (i *Invocation) check() error {
 }
 
 func (i *Invocation) invalidateCachedStatement() {
-	if i.db.conn.useStatementCache && len(i.statementLabel) > 0 {
-		i.db.conn.statementCache.InvalidateStatement(i.statementLabel)
+	if i.conn.useStatementCache && len(i.statementLabel) > 0 {
+		i.conn.statementCache.InvalidateStatement(i.statementLabel)
 	}
 }
 
 func (i *Invocation) closeStatement(err error, stmt *sql.Stmt) error {
-	if !i.db.conn.useStatementCache {
+	if !i.conn.useStatementCache {
 		closeErr := stmt.Close()
 		if closeErr != nil {
 			return exception.Nest(err, closeErr)
@@ -937,7 +935,7 @@ func (i *Invocation) finalizer(r interface{}, err error, eventFlag logger.Event,
 		err = exception.Nest(err, recoveryException)
 	}
 	if i.fireEvents {
-		i.db.conn.fireEvent(eventFlag, statement, time.Now().Sub(start), err, i.statementLabel)
+		i.conn.fireEvent(eventFlag, statement, time.Now().Sub(start), err, i.statementLabel)
 	}
 	i.statementLabel = ""
 	return err

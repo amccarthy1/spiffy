@@ -93,5 +93,5 @@ func (db *DB) Err() error {
 
 // Invoke starts a new invocation.
 func (db *DB) Invoke() *Invocation {
-	return &Invocation{db: db, err: db.err, fireEvents: db.fireEvents}
+	return &Invocation{conn: db.conn, tx: db.tx, err: db.err, fireEvents: db.fireEvents}
 }

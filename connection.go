@@ -108,7 +108,7 @@ func NewFromEnv() *Connection {
 
 	dbc := New()
 	dbc.Host = envVarWithDefault("DB_HOST", "localhost")
-	dbc.Database = os.Getenv("DB_NAME")
+	dbc.Database = envVarWithDefault("DB_NAME", "postgres")
 	dbc.Schema = os.Getenv("DB_SCHEMA")
 	dbc.Username = os.Getenv("DB_USER")
 	dbc.Password = os.Getenv("DB_PASSWORD")
@@ -341,22 +341,16 @@ func (dbc *Connection) PrepareCached(id, statement string, tx *sql.Tx) (*sql.Stm
 }
 
 // --------------------------------------------------------------------------------
-// DB context
+// Invocation context
 // --------------------------------------------------------------------------------
 
-// DB returns a new db context.
-// You can optionally pass in an existing context and that will
-// supercede the context the connection would have created for you.
-func (dbc *Connection) DB(dbs ...*DB) *DB {
-	if len(dbs) > 0 {
-		return dbs[0]
+// Invoke returns a new invocation.
+func (dbc *Connection) Invoke(txs ...*sql.Tx) *Invocation {
+	return &Invocation{
+		conn:       dbc,
+		tx:         OptionalTx(txs...),
+		fireEvents: dbc.logger != nil,
 	}
-	return &DB{conn: dbc, fireEvents: dbc.logger != nil}
-}
-
-// InTx is a shortcut for DB().InTx(...).
-func (dbc *Connection) InTx(txs ...*sql.Tx) *DB {
-	return &DB{conn: dbc, tx: OptionalTx(txs...), fireEvents: dbc.logger != nil}
 }
 
 // --------------------------------------------------------------------------------
@@ -380,7 +374,7 @@ func (dbc *Connection) ExecInTx(statement string, tx *sql.Tx, args ...interface{
 
 // ExecInTxWithCacheLabel runs a statement within a transaction.
 func (dbc *Connection) ExecInTxWithCacheLabel(statement, cacheLabel string, tx *sql.Tx, args ...interface{}) (err error) {
-	return dbc.DB().InTx(tx).Invoke().WithLabel(cacheLabel).Exec(statement, args...)
+	return dbc.Invoke(tx).WithLabel(cacheLabel).Exec(statement, args...)
 }
 
 // Query runs the selected statement and returns a Query.
@@ -390,7 +384,7 @@ func (dbc *Connection) Query(statement string, args ...interface{}) *Query {
 
 // QueryInTx runs the selected statement in a transaction and returns a Query.
 func (dbc *Connection) QueryInTx(statement string, tx *sql.Tx, args ...interface{}) (result *Query) {
-	return dbc.DB().InTx(tx).Invoke().Query(statement, args...)
+	return dbc.Invoke(tx).Query(statement, args...)
 }
 
 // GetByID returns a given object based on a group of primary key ids.
@@ -400,7 +394,7 @@ func (dbc *Connection) GetByID(object DatabaseMapped, ids ...interface{}) error 
 
 // GetByIDInTx returns a given object based on a group of primary key ids within a transaction.
 func (dbc *Connection) GetByIDInTx(object DatabaseMapped, tx *sql.Tx, args ...interface{}) error {
-	return dbc.DB().InTx(tx).Invoke().Get(object, args...)
+	return dbc.Invoke(tx).Get(object, args...)
 }
 
 // GetAll returns all rows of an object mapped table.
@@ -410,7 +404,7 @@ func (dbc *Connection) GetAll(collection interface{}) error {
 
 // GetAllInTx returns all rows of an object mapped table wrapped in a transaction.
 func (dbc *Connection) GetAllInTx(collection interface{}, tx *sql.Tx) error {
-	return dbc.DB().InTx(tx).Invoke().GetAll(collection)
+	return dbc.Invoke(tx).GetAll(collection)
 }
 
 // Create writes an object to the database.
@@ -420,7 +414,7 @@ func (dbc *Connection) Create(object DatabaseMapped) error {
 
 // CreateInTx writes an object to the database within a transaction.
 func (dbc *Connection) CreateInTx(object DatabaseMapped, tx *sql.Tx) (err error) {
-	return dbc.DB().InTx(tx).Invoke().Create(object)
+	return dbc.Invoke(tx).Create(object)
 }
 
 // CreateIfNotExists writes an object to the database if it does not already exist.
@@ -430,7 +424,7 @@ func (dbc *Connection) CreateIfNotExists(object DatabaseMapped) error {
 
 // CreateIfNotExistsInTx writes an object to the database if it does not already exist within a transaction.
 func (dbc *Connection) CreateIfNotExistsInTx(object DatabaseMapped, tx *sql.Tx) (err error) {
-	return dbc.DB().InTx(tx).Invoke().CreateIfNotExists(object)
+	return dbc.Invoke(tx).CreateIfNotExists(object)
 }
 
 // CreateMany writes many an objects to the database.
@@ -440,7 +434,7 @@ func (dbc *Connection) CreateMany(objects interface{}) error {
 
 // CreateManyInTx writes many an objects to the database within a transaction.
 func (dbc *Connection) CreateManyInTx(objects interface{}, tx *sql.Tx) (err error) {
-	return dbc.DB().InTx(tx).Invoke().CreateMany(objects)
+	return dbc.Invoke(tx).CreateMany(objects)
 }
 
 // Update updates an object.
@@ -450,7 +444,7 @@ func (dbc *Connection) Update(object DatabaseMapped) error {
 
 // UpdateInTx updates an object wrapped in a transaction.
 func (dbc *Connection) UpdateInTx(object DatabaseMapped, tx *sql.Tx) (err error) {
-	return dbc.DB().InTx(tx).Invoke().Update(object)
+	return dbc.Invoke(tx).Update(object)
 }
 
 // Exists returns a bool if a given object exists (utilizing the primary key columns if they exist).
@@ -460,7 +454,7 @@ func (dbc *Connection) Exists(object DatabaseMapped) (bool, error) {
 
 // ExistsInTx returns a bool if a given object exists (utilizing the primary key columns if they exist) wrapped in a transaction.
 func (dbc *Connection) ExistsInTx(object DatabaseMapped, tx *sql.Tx) (exists bool, err error) {
-	return dbc.DB().InTx(tx).Invoke().Exists(object)
+	return dbc.Invoke(tx).Exists(object)
 }
 
 // Delete deletes an object from the database.
@@ -470,7 +464,7 @@ func (dbc *Connection) Delete(object DatabaseMapped) error {
 
 // DeleteInTx deletes an object from the database wrapped in a transaction.
 func (dbc *Connection) DeleteInTx(object DatabaseMapped, tx *sql.Tx) (err error) {
-	return dbc.DB().InTx(tx).Invoke().Delete(object)
+	return dbc.Invoke(tx).Delete(object)
 }
 
 // Upsert inserts the object if it doesn't exist already (as defined by its primary keys) or updates it.
@@ -480,7 +474,7 @@ func (dbc *Connection) Upsert(object DatabaseMapped) error {
 
 // UpsertInTx inserts the object if it doesn't exist already (as defined by its primary keys) or updates it wrapped in a transaction.
 func (dbc *Connection) UpsertInTx(object DatabaseMapped, tx *sql.Tx) (err error) {
-	return dbc.DB().InTx(tx).Invoke().Upsert(object)
+	return dbc.Invoke(tx).Upsert(object)
 }
 
 // Truncate fully removes an tables rows in a single opertation.
@@ -490,5 +484,5 @@ func (dbc *Connection) Truncate(object DatabaseMapped) error {
 
 // TruncateInTx applies a truncation in a transaction.
 func (dbc *Connection) TruncateInTx(object DatabaseMapped, tx *sql.Tx) error {
-	return dbc.DB().InTx(tx).Invoke().Truncate(object)
+	return dbc.Invoke(tx).Truncate(object)
 }
