@@ -362,6 +362,11 @@ func (dbc *Connection) Invoke(txs ...*sql.Tx) *Invocation {
 	}
 }
 
+// InTx is an alias to Invoke.
+func (dbc *Connection) InTx(txs ...*sql.Tx) *Invocation {
+	return dbc.Invoke(txs...)
+}
+
 // --------------------------------------------------------------------------------
 // Invocation Context Stubs
 // --------------------------------------------------------------------------------
