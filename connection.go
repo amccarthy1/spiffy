@@ -344,6 +344,15 @@ func (dbc *Connection) PrepareCached(id, statement string, tx *sql.Tx) (*sql.Stm
 // Invocation context
 // --------------------------------------------------------------------------------
 
+// DB returns a new db context.
+func (dbc *Connection) DB(txs ...*sql.Tx) *DB {
+	return &DB{
+		conn:       dbc,
+		tx:         OptionalTx(txs...),
+		fireEvents: dbc.logger != nil,
+	}
+}
+
 // Invoke returns a new invocation.
 func (dbc *Connection) Invoke(txs ...*sql.Tx) *Invocation {
 	return &Invocation{
