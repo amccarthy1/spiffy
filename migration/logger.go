@@ -1,6 +1,7 @@
 package migration
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -9,12 +10,15 @@ import (
 
 const (
 	// Event is a logger event flag.
-	Event logger.Event = "db.migration"
+	Event logger.Flag = "db.migration"
 )
 
 // NewLogger returns a new logger instance.
-func NewLogger(log *logger.Agent) *Logger {
-	log.EnableEvent(Event)
+func NewLogger(log *logger.Logger) *Logger {
+	log.Enable(Event)
+	log.Listen(Event, logger.DefaultListenerName, func(wr logger.Writer, e logger.Event) {
+		wr.Write(e)
+	})
 	return &Logger{
 		Output: log,
 	}
@@ -23,7 +27,10 @@ func NewLogger(log *logger.Agent) *Logger {
 // NewLoggerFromEnv returns a new logger instance.
 func NewLoggerFromEnv() *Logger {
 	log := logger.NewFromEnv()
-	log.EnableEvent(Event)
+	log.Enable(Event)
+	log.Listen(Event, logger.DefaultListenerName, func(wr logger.Writer, e logger.Event) {
+		wr.Write(e)
+	})
 	return &Logger{
 		Output: log,
 	}
@@ -31,7 +38,7 @@ func NewLoggerFromEnv() *Logger {
 
 // Logger is a logger for migration steps.
 type Logger struct {
-	Output *logger.Agent
+	Output *logger.Logger
 	Phase  string // `test` or `apply`
 	Result string // `apply` or `skipped` or `failed`
 
@@ -76,27 +83,28 @@ func (l *Logger) Error(m Migration, err error) error {
 
 // WriteStats writes final stats to output
 func (l *Logger) WriteStats() {
-	l.Output.Sync().WriteEventf(
+	l.Output.SyncTrigger(logger.Messagef(
 		Event,
-		logger.ColorWhite,
 		"%s applied %s skipped %s failed",
 		l.colorize(fmt.Sprintf("%d", l.applied), logger.ColorGreen),
 		l.colorize(fmt.Sprintf("%d", l.skipped), logger.ColorLightGreen),
 		l.colorize(fmt.Sprintf("%d", l.failed), logger.ColorRed),
-	)
+	).WithFlagColor(logger.ColorLightWhite))
 }
 
-func (l *Logger) colorize(text string, color logger.AnsiColorCode) string {
-	return l.Output.Writer().Colorize(text, color)
+func (l *Logger) colorize(text string, color logger.AnsiColor) string {
+	if typed, isTyped := l.Output.Writer().(logger.TextFormatter); isTyped {
+		return typed.Colorize(text, color)
+	}
+	return text
 }
 
-func (l *Logger) colorizeFixedWidthLeftAligned(text string, color logger.AnsiColorCode, width int) string {
+func (l *Logger) colorizeFixedWidthLeftAligned(text string, color logger.AnsiColor, width int) string {
 	fixedToken := fmt.Sprintf("%%-%ds", width)
-	fixedMessage := fmt.Sprintf(fixedToken, text)
-	return l.Output.Writer().Colorize(fixedMessage, color)
+	return l.colorize(fmt.Sprintf(fixedToken, text), color)
 }
 
-func (l *Logger) write(m Migration, color logger.AnsiColorCode, body string) {
+func (l *Logger) write(m Migration, color logger.AnsiColor, body string) {
 	if l.Output == nil {
 		return
 	}
@@ -109,34 +117,32 @@ func (l *Logger) write(m Migration, color logger.AnsiColorCode, body string) {
 		resultColor = logger.ColorRed
 	}
 
-	buffer := l.Output.Writer().GetBuffer()
-	defer l.Output.Writer().PutBuffer(buffer)
+	buf := bytes.NewBuffer(nil)
 
-	buffer.WriteString(l.colorizeFixedWidthLeftAligned(l.Phase, logger.ColorBlue, 5))
-	buffer.WriteRune(logger.RuneSpace)
-	buffer.WriteString(l.colorize("--", logger.ColorLightBlack))
-	buffer.WriteRune(logger.RuneSpace)
-	buffer.WriteString(l.colorizeFixedWidthLeftAligned(l.Result, resultColor, 5))
+	buf.WriteString(l.colorizeFixedWidthLeftAligned(l.Phase, logger.ColorBlue, 5))
+	buf.WriteRune(logger.RuneSpace)
+	buf.WriteString(l.colorize("--", logger.ColorLightBlack))
+	buf.WriteRune(logger.RuneSpace)
+	buf.WriteString(l.colorizeFixedWidthLeftAligned(l.Result, resultColor, 5))
 
 	if stack := l.renderStack(m, color); len(stack) > 0 {
-		buffer.WriteRune(logger.RuneSpace)
-		buffer.WriteString(stack)
+		buf.WriteRune(logger.RuneSpace)
+		buf.WriteString(stack)
 	}
 	if len(body) > 0 {
-		buffer.WriteRune(logger.RuneSpace)
-		buffer.WriteString(l.colorize("--", logger.ColorLightBlack))
-		buffer.WriteRune(logger.RuneSpace)
-		buffer.WriteString(body)
+		buf.WriteRune(logger.RuneSpace)
+		buf.WriteString(l.colorize("--", logger.ColorLightBlack))
+		buf.WriteRune(logger.RuneSpace)
+		buf.WriteString(body)
 	}
 
-	l.Output.Sync().WriteEventf(
+	l.Output.SyncTrigger(logger.Messagef(
 		Event,
-		logger.ColorWhite,
-		buffer.String(),
-	)
+		buf.String(),
+	).WithFlagColor(logger.ColorLightWhite))
 }
 
-func (l *Logger) renderStack(m Migration, color logger.AnsiColorCode) string {
+func (l *Logger) renderStack(m Migration, color logger.AnsiColor) string {
 	stackSeparator := fmt.Sprintf(" %s ", l.colorize(">", logger.ColorLightBlack))
 	var renderedStack string
 	cursor := m.Parent()
