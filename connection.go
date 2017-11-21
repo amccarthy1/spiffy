@@ -143,7 +143,7 @@ type Connection struct {
 	statementCacheLock *sync.Mutex
 
 	bufferPool *BufferPool
-	logger     *logger.Agent
+	log        *logger.Logger
 
 	useStatementCache bool
 	statementCache    *StatementCache
@@ -161,24 +161,24 @@ func (dbc *Connection) Close() error {
 	return dbc.Connection.Close()
 }
 
-// SetLogger sets the connection's diagnostic agent.
-func (dbc *Connection) SetLogger(agent *logger.Agent) {
-	dbc.logger = agent
+// WithLogger sets the connection's diagnostic agent.
+func (dbc *Connection) WithLogger(log *logger.Logger) {
+	dbc.log = log
 }
 
 // Logger returns the diagnostics agent.
-func (dbc *Connection) Logger() *logger.Agent {
-	return dbc.logger
+func (dbc *Connection) Logger() *logger.Logger {
+	return dbc.log
 }
 
-func (dbc *Connection) fireEvent(flag logger.Event, query string, elapsed time.Duration, err error, optionalQueryLabel ...string) {
-	if dbc.logger != nil {
+func (dbc *Connection) fireEvent(flag logger.Flag, query string, elapsed time.Duration, err error, optionalQueryLabel ...string) {
+	if dbc.log != nil {
 		var queryLabel string
 		if len(optionalQueryLabel) > 0 {
 			queryLabel = optionalQueryLabel[0]
 		}
 
-		dbc.logger.OnEvent(flag, query, elapsed, err, queryLabel)
+		dbc.log.Trigger(NewEvent(flag, queryLabel, query, elapsed, err))
 	}
 }
 
@@ -349,7 +349,7 @@ func (dbc *Connection) DB(txs ...*sql.Tx) *DB {
 	return &DB{
 		conn:       dbc,
 		tx:         OptionalTx(txs...),
-		fireEvents: dbc.logger != nil,
+		fireEvents: dbc.log != nil,
 	}
 }
 
@@ -358,7 +358,7 @@ func (dbc *Connection) Invoke(txs ...*sql.Tx) *Invocation {
 	return &Invocation{
 		conn:       dbc,
 		tx:         OptionalTx(txs...),
-		fireEvents: dbc.logger != nil,
+		fireEvents: dbc.log != nil,
 	}
 }
 

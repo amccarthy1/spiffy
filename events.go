@@ -1,67 +1,72 @@
 package spiffy
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	logger "github.com/blendlabs/go-logger"
 )
 
 const (
-	// EventFlagExecute is a logger.EventFlag
-	EventFlagExecute logger.Event = "db.execute"
+	// FlagExecute is a logger.EventFlag
+	FlagExecute logger.Flag = "db.execute"
 
-	// EventFlagQuery is a logger.EventFlag
-	EventFlagQuery logger.Event = "db.query"
+	// FlagQuery is a logger.EventFlag
+	FlagQuery logger.Flag = "db.query"
 )
 
-// EventListener is an event listener for logger events.
-type EventListener func(writer *logger.Writer, ts logger.TimeSource, event logger.Event, query string, elapsed time.Duration, err error, queryLabel string)
-
-// NewEventListener returns a new listener for diagnostics events.
-func NewEventListener(action EventListener) logger.EventListener {
-	return func(writer *logger.Writer, ts logger.TimeSource, event logger.Event, state ...interface{}) {
-
-		var queryBody = state[0].(string)
-		var elapsed = state[1].(time.Duration)
-
-		var err error
-		if len(state) > 2 && state[2] != nil {
-			err = state[2].(error)
-		}
-
-		var queryLabel string
-		if len(state) > 3 && state[3] != nil {
-			queryLabel = state[3].(string)
-		}
-
-		action(writer, ts, event, queryBody, elapsed, err, queryLabel)
+// NewEvent creates a new logger event.
+func NewEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) *Event {
+	return &Event{
+		flag:       flag,
+		ts:         time.Now().UTC(),
+		queryLabel: label,
+		queryBody:  query,
+		elapsed:    elapsed,
+		err:        err,
 	}
 }
 
-// NewPrintStatementListener is a helper listener.
-func NewPrintStatementListener() logger.EventListener {
-	return func(writer *logger.Writer, ts logger.TimeSource, event logger.Event, state ...interface{}) {
-		var queryBody = state[0].(string)
-		var elapsed = state[1].(time.Duration)
+// Event is the event we trigger the logger with.
+type Event struct {
+	flag       logger.Flag
+	ts         time.Time
+	queryLabel string
+	queryBody  string
+	elapsed    time.Duration
+	err        error
+}
 
-		var err error
-		if len(state) > 2 && state[2] != nil {
-			err = state[2].(error)
-		}
+// Flag returns the event flag.
+func (e Event) Flag() logger.Flag {
+	return e.flag
+}
 
-		var queryLabel string
-		if len(state) > 3 && state[3] != nil {
-			queryLabel = state[3].(string)
-		}
+// Timestamp returns the event timestamp.
+func (e Event) Timestamp() time.Time {
+	return e.ts
+}
 
-		if len(queryLabel) > 0 {
-			logger.WriteEventf(writer, ts, event, logger.ColorLightBlack, "(%v) %s\n%s", elapsed, queryLabel, queryBody)
-		} else {
-			logger.WriteEventf(writer, ts, event, logger.ColorLightBlack, "(%v)\n%s", elapsed, queryBody)
-		}
-
-		if err != nil {
-			writer.ErrorfWithTimeSource(ts, "%s", err.Error())
-		}
+// WriteText writes the event text to the output.
+func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
+	buf.WriteString(fmt.Sprintf("(%v) ", e.elapsed))
+	if len(e.queryLabel) > 0 {
+		buf.WriteString(e.queryLabel)
 	}
+	buf.WriteRune(logger.RuneNewline)
+	buf.WriteString(e.queryBody)
+	return nil
+}
+
+// MarshalJSON implements json.Marshaler.
+func (e Event) MarshalJSON() ([]byte, error) {
+	return json.Marshal(map[string]interface{}{
+		"flag":    e.flag,
+		"ts":      e.ts,
+		"label":   e.queryLabel,
+		"query":   e.queryBody,
+		"elapsed": logger.Milliseconds(e.elapsed),
+	})
 }

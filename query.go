@@ -296,7 +296,7 @@ func (q *Query) finalizer(r interface{}, err error) error {
 	}
 
 	if q.fireEvents {
-		q.conn.fireEvent(EventFlagQuery, q.statement, time.Since(q.start), err, q.statementLabel)
+		q.conn.fireEvent(FlagQuery, q.statement, time.Since(q.start), err, q.statementLabel)
 	}
 	return err
 }
