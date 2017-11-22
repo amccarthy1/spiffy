@@ -58,6 +58,26 @@ func (e Event) Timestamp() time.Time {
 	return e.ts
 }
 
+// QueryLabel returns the query label.
+func (e Event) QueryLabel() string {
+	return e.queryLabel
+}
+
+// QueryBody returns the query body.
+func (e Event) QueryBody() string {
+	return e.queryBody
+}
+
+// Elapsed returns the elapsed time.
+func (e Event) Elapsed() time.Duration {
+	return e.elapsed
+}
+
+// Err returns the error.
+func (e Event) Err() error {
+	return e.err
+}
+
 // WriteText writes the event text to the output.
 func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
 	buf.WriteString(fmt.Sprintf("(%v) ", e.elapsed))
