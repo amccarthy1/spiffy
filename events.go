@@ -18,14 +18,23 @@ const (
 )
 
 // NewEvent creates a new logger event.
-func NewEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) *Event {
-	return &Event{
+func NewEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) Event {
+	return Event{
 		flag:       flag,
 		ts:         time.Now().UTC(),
 		queryLabel: label,
 		queryBody:  query,
 		elapsed:    elapsed,
 		err:        err,
+	}
+}
+
+// NewEventListener returns a new listener for spiffy events.
+func NewEventListener(listener func(wr logger.Writer, e Event)) logger.Listener {
+	return func(wr logger.Writer, e logger.Event) {
+		if typed, isTyped := e.(Event); isTyped {
+			listener(wr, typed)
+		}
 	}
 }
 
