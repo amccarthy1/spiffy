@@ -71,12 +71,12 @@ func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
 // MarshalJSON marshals the event as json.
 func (e Event) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"flag":   e.Flag(),
-		"ts":     e.ts,
-		"phase":  e.phase,
-		"result": e.result,
-		"labels": e.labels,
-		"body":   e.body,
+		logger.JSONFieldFlag:      e.Flag(),
+		logger.JSONFieldTimestamp: e.Timestamp(),
+		"phase":                   e.phase,
+		"result":                  e.result,
+		"labels":                  e.labels,
+		"body":                    e.body,
 	})
 }
 

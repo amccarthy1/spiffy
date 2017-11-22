@@ -92,10 +92,10 @@ func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
 // MarshalJSON implements json.Marshaler.
 func (e Event) MarshalJSON() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"flag":       e.flag,
-		"ts":         e.ts,
-		"queryLabel": e.queryLabel,
-		"queryBody":  e.queryBody,
-		"elapsed":    logger.Milliseconds(e.elapsed),
+		logger.JSONFieldFlag:      e.Flag(),
+		logger.JSONFieldTimestamp: e.Timestamp(),
+		"queryLabel":              e.queryLabel,
+		"queryBody":               e.queryBody,
+		logger.JSONFieldElapsed:   logger.Milliseconds(e.elapsed),
 	})
 }
