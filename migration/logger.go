@@ -10,9 +10,6 @@ import (
 // NewLogger returns a new logger instance.
 func NewLogger(log *logger.Logger) *Logger {
 	log.Enable(Flag)
-	log.Listen(Flag, logger.DefaultListenerName, func(wr logger.Writer, e logger.Event) {
-		wr.Write(e)
-	})
 	return &Logger{
 		Output: log,
 	}
@@ -22,9 +19,6 @@ func NewLogger(log *logger.Logger) *Logger {
 func NewLoggerFromEnv() *Logger {
 	log := logger.NewFromEnv()
 	log.Enable(Flag)
-	log.Listen(Flag, logger.DefaultListenerName, func(wr logger.Writer, e logger.Event) {
-		wr.Write(e)
-	})
 	return &Logger{
 		Output: log,
 	}

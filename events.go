@@ -2,7 +2,6 @@ package spiffy
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"time"
 
@@ -30,10 +29,10 @@ func NewEvent(flag logger.Flag, label, query string, elapsed time.Duration, err 
 }
 
 // NewEventListener returns a new listener for spiffy events.
-func NewEventListener(listener func(wr logger.Writer, e Event)) logger.Listener {
-	return func(wr logger.Writer, e logger.Event) {
+func NewEventListener(listener func(e Event)) logger.Listener {
+	return func(e logger.Event) {
 		if typed, isTyped := e.(Event); isTyped {
-			listener(wr, typed)
+			listener(typed)
 		}
 	}
 }
@@ -79,23 +78,20 @@ func (e Event) Err() error {
 }
 
 // WriteText writes the event text to the output.
-func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
+func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
 	buf.WriteString(fmt.Sprintf("(%v) ", e.elapsed))
 	if len(e.queryLabel) > 0 {
 		buf.WriteString(e.queryLabel)
 	}
 	buf.WriteRune(logger.RuneNewline)
 	buf.WriteString(e.queryBody)
-	return nil
 }
 
-// MarshalJSON implements json.Marshaler.
-func (e Event) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		logger.JSONFieldFlag:      e.Flag(),
-		logger.JSONFieldTimestamp: e.Timestamp(),
-		"queryLabel":              e.queryLabel,
-		"queryBody":               e.queryBody,
-		logger.JSONFieldElapsed:   logger.Milliseconds(e.elapsed),
-	})
+// WriteJSON implements logger.JSONWritable.
+func (e Event) WriteJSON() logger.JSONObj {
+	return logger.JSONObj{
+		"queryLabel":            e.queryLabel,
+		"queryBody":             e.queryBody,
+		logger.JSONFieldElapsed: logger.Milliseconds(e.elapsed),
+	}
 }

@@ -2,7 +2,6 @@ package migration
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -40,7 +39,7 @@ func (e Event) colorizeFixedWidthLeftAligned(tf logger.TextFormatter, text strin
 }
 
 // WriteText writes the migration event as text.
-func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
+func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
 	resultColor := logger.ColorBlue
 	switch e.result {
 	case "skipped":
@@ -65,19 +64,16 @@ func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
 		buf.WriteRune(logger.RuneSpace)
 		buf.WriteString(e.body)
 	}
-	return nil
 }
 
-// MarshalJSON marshals the event as json.
-func (e Event) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		logger.JSONFieldFlag:      e.Flag(),
-		logger.JSONFieldTimestamp: e.Timestamp(),
-		"phase":                   e.phase,
-		"result":                  e.result,
-		"labels":                  e.labels,
-		"body":                    e.body,
-	})
+// WriteJSON implements logger.JSONWritable.
+func (e Event) WriteJSON() logger.JSONObj {
+	return logger.JSONObj{
+		"phase":  e.phase,
+		"result": e.result,
+		"labels": e.labels,
+		"body":   e.body,
+	}
 }
 
 // StatsEvent is a migration logger event.
@@ -100,24 +96,21 @@ func (se StatsEvent) Timestamp() time.Time {
 }
 
 // WriteText writes the event to a text writer.
-func (se StatsEvent) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) error {
+func (se StatsEvent) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
 	buf.WriteString(fmt.Sprintf("%s applied %s skipped %s failed %s total",
 		tf.Colorize(fmt.Sprintf("%d", se.applied), logger.ColorGreen),
 		tf.Colorize(fmt.Sprintf("%d", se.skipped), logger.ColorLightGreen),
 		tf.Colorize(fmt.Sprintf("%d", se.failed), logger.ColorRed),
 		tf.Colorize(fmt.Sprintf("%d", se.total), logger.ColorLightWhite),
 	))
-	return nil
 }
 
-// MarshalJSON marshals the event as json.
-func (se StatsEvent) MarshalJSON() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"flag":    se.Flag(),
-		"ts":      se.ts,
+// WriteJSON implements logger.JSONWritable.
+func (se StatsEvent) WriteJSON() logger.JSONObj {
+	return logger.JSONObj{
 		"applied": se.applied,
 		"skipped": se.skipped,
 		"failed":  se.failed,
 		"total":   se.total,
-	})
+	}
 }
