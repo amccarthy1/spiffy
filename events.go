@@ -84,21 +84,26 @@ func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
 		buf.WriteString(e.queryLabel)
 	}
 	buf.WriteRune(logger.RuneNewline)
-	buf.WriteString(e.queryBody)
 }
 
 // WriteJSON implements logger.JSONWritable.
 func (e Event) WriteJSON() logger.JSONObj {
 	return logger.JSONObj{
 		"queryLabel":            e.queryLabel,
-		"queryBody":             e.queryBody,
 		logger.JSONFieldElapsed: logger.Milliseconds(e.elapsed),
+	}
+}
+
+// NewStatementEvent creates a new logger event.
+func NewStatementEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) Event {
+	return StatementEvent{
+		Event: NewEvent(flag, label, query, elapsed, err),
 	}
 }
 
 // NewStatementEventListener returns a new listener for spiffy statement events.
 func NewStatementEventListener(listener func(e Event)) logger.Listener {
-	return func(e logger.StatementEvent) {
+	return func(e logger.Event) {
 		if typed, isTyped := e.(StatementEvent); isTyped {
 			listener(typed)
 		}
