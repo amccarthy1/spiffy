@@ -14,9 +14,6 @@ const (
 
 	// FlagQuery is a logger.EventFlag
 	FlagQuery logger.Flag = "db.query"
-
-	// FlagStatement is a logger.EventFlag
-	FlagStatement logger.Flag = "db.statement"
 )
 
 // NewEvent creates a new logger event.
@@ -87,13 +84,44 @@ func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
 		buf.WriteString(e.queryLabel)
 	}
 	buf.WriteRune(logger.RuneNewline)
-	if e.Flag() == FlagStatement {
-		buf.WriteString(e.queryBody)
-	}
+	buf.WriteString(e.queryBody)
 }
 
 // WriteJSON implements logger.JSONWritable.
 func (e Event) WriteJSON() logger.JSONObj {
+	return logger.JSONObj{
+		"queryLabel":            e.queryLabel,
+		"queryBody":             e.queryBody,
+		logger.JSONFieldElapsed: logger.Milliseconds(e.elapsed),
+	}
+}
+
+// NewStatementEventListener returns a new listener for spiffy statement events.
+func NewStatementEventListener(listener func(e Event)) logger.Listener {
+	return func(e logger.StatementEvent) {
+		if typed, isTyped := e.(StatementEvent); isTyped {
+			listener(typed)
+		}
+	}
+}
+
+// StatementEvent is the event we trigger the logger with.
+type StatementEvent struct {
+	Event
+}
+
+// WriteText writes the event text to the output.
+func (e StatementEvent) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
+	buf.WriteString(fmt.Sprintf("(%v) ", e.elapsed))
+	if len(e.queryLabel) > 0 {
+		buf.WriteString(e.queryLabel)
+	}
+	buf.WriteRune(logger.RuneNewline)
+	buf.WriteString(e.queryBody)
+}
+
+// WriteJSON implements logger.JSONWritable.
+func (e StatementEvent) WriteJSON() logger.JSONObj {
 	return logger.JSONObj{
 		"queryLabel":            e.queryLabel,
 		"queryBody":             e.queryBody,
