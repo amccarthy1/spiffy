@@ -14,6 +14,9 @@ const (
 
 	// FlagQuery is a logger.EventFlag
 	FlagQuery logger.Flag = "db.query"
+
+	// FlagStatement is a logger.EventFlag
+	FlagStatement logger.Flag = "db.statement"
 )
 
 // NewEvent creates a new logger event.
@@ -84,7 +87,9 @@ func (e Event) WriteText(tf logger.TextFormatter, buf *bytes.Buffer) {
 		buf.WriteString(e.queryLabel)
 	}
 	buf.WriteRune(logger.RuneNewline)
-	buf.WriteString(e.queryBody)
+	if e.Flag() == FlagStatement {
+		buf.WriteString(e.queryBody)
+	}
 }
 
 // WriteJSON implements logger.JSONWritable.
