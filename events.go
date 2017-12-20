@@ -95,14 +95,14 @@ func (e Event) WriteJSON() logger.JSONObj {
 }
 
 // NewStatementEvent creates a new logger event.
-func NewStatementEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) Event {
+func NewStatementEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) StatementEvent {
 	return StatementEvent{
 		Event: NewEvent(flag, label, query, elapsed, err),
 	}
 }
 
 // NewStatementEventListener returns a new listener for spiffy statement events.
-func NewStatementEventListener(listener func(e Event)) logger.Listener {
+func NewStatementEventListener(listener func(e StatementEvent)) logger.Listener {
 	return func(e logger.Event) {
 		if typed, isTyped := e.(StatementEvent); isTyped {
 			listener(typed)
