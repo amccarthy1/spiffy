@@ -17,7 +17,7 @@ const (
 )
 
 // NewEvent creates a new logger event.
-func NewEvent(flag logger.Flag, label, elapsed time.Duration, err error) Event {
+func NewEvent(flag logger.Flag, label string, elapsed time.Duration, err error) Event {
 	return Event{
 		flag:       flag,
 		ts:         time.Now().UTC(),
