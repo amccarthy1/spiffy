@@ -17,12 +17,11 @@ const (
 )
 
 // NewEvent creates a new logger event.
-func NewEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) Event {
+func NewEvent(flag logger.Flag, label, elapsed time.Duration, err error) Event {
 	return Event{
 		flag:       flag,
 		ts:         time.Now().UTC(),
 		queryLabel: label,
-		queryBody:  query,
 		elapsed:    elapsed,
 		err:        err,
 	}
@@ -62,11 +61,6 @@ func (e Event) QueryLabel() string {
 	return e.queryLabel
 }
 
-// QueryBody returns the query body.
-func (e Event) QueryBody() string {
-	return e.queryBody
-}
-
 // Elapsed returns the elapsed time.
 func (e Event) Elapsed() time.Duration {
 	return e.elapsed
@@ -97,7 +91,8 @@ func (e Event) WriteJSON() logger.JSONObj {
 // NewStatementEvent creates a new logger event.
 func NewStatementEvent(flag logger.Flag, label, query string, elapsed time.Duration, err error) StatementEvent {
 	return StatementEvent{
-		Event: NewEvent(flag, label, query, elapsed, err),
+		Event:     NewEvent(flag, label, elapsed, err),
+		queryBody: query,
 	}
 }
 
@@ -113,6 +108,12 @@ func NewStatementEventListener(listener func(e StatementEvent)) logger.Listener 
 // StatementEvent is the event we trigger the logger with.
 type StatementEvent struct {
 	Event
+	queryBody string
+}
+
+// QueryBody returns the query body.
+func (e StatementEvent) QueryBody() string {
+	return e.queryBody
 }
 
 // WriteText writes the event text to the output.

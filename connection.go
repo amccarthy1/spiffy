@@ -178,7 +178,7 @@ func (dbc *Connection) fireEvent(flag logger.Flag, query string, elapsed time.Du
 			queryLabel = optionalQueryLabel[0]
 		}
 
-		dbc.log.Trigger(NewEvent(flag, queryLabel, query, elapsed, err))
+		dbc.log.Trigger(NewEvent(flag, queryLabel, elapsed, err))
 		dbc.log.Trigger(NewStatementEvent(flag, queryLabel, query, elapsed, err))
 	}
 }
