@@ -114,7 +114,7 @@ func (dfr *DataFileReader) Test(c *spiffy.Connection, optionalTx ...*sql.Tx) (er
 		}
 		tx.Rollback()
 	}()
-	err = dfr.invoke(c, tx)
+	err = dfr.Invoke(c, tx)
 	return
 }
 
@@ -137,12 +137,12 @@ func (dfr *DataFileReader) Apply(c *spiffy.Connection, optionalTx ...*sql.Tx) (e
 		}
 	}()
 
-	err = dfr.invoke(c, tx)
+	err = dfr.Invoke(c, tx)
 	return
 }
 
 // Invoke consumes the data file and writes it to the db.
-func (dfr *DataFileReader) invoke(c *spiffy.Connection, tx *sql.Tx) (err error) {
+func (dfr *DataFileReader) Invoke(c *spiffy.Connection, tx *sql.Tx) (err error) {
 	var f *os.File
 	if f, err = os.Open(dfr.path); err != nil {
 		return
