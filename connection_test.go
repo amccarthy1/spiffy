@@ -11,48 +11,12 @@ import (
 	"github.com/blendlabs/go-assert"
 )
 
-func TestNewAunauthenticatedConnection(t *testing.T) {
-	a := assert.New(t)
-	conn := NewWithHost("test_host", "test_database")
-	a.Equal("test_host", conn.Host)
-	a.Equal("test_database", conn.Database)
-	str, err := conn.CreatePostgresConnectionString()
-	a.Nil(err)
-	a.Equal("postgres://test_host/test_database?sslmode=disable", str)
-}
-
-func TestNewConnection(t *testing.T) {
-	a := assert.New(t)
-	conn := NewWithPassword("test_host", "test_database", "test_user", "test_password")
-	a.Equal("test_host", conn.Host)
-	a.Equal("test_database", conn.Database)
-	a.Equal("test_user", conn.Username)
-	a.Equal("test_password", conn.Password)
-	str, err := conn.CreatePostgresConnectionString()
-	a.Nil(err)
-	a.Equal("postgres://test_user:test_password@test_host/test_database?sslmode=disable", str)
-}
-
-func TestNewSSLConnection(t *testing.T) {
-	a := assert.New(t)
-	conn := NewWithSSLMode("test_host", "test_database", "test_user", "test_password", "a good one")
-	a.Equal("test_host", conn.Host)
-	a.Equal("test_database", conn.Database)
-	a.Equal("test_user", conn.Username)
-	a.Equal("test_password", conn.Password)
-	a.Equal("a good one", conn.SSLMode)
-	str, err := conn.CreatePostgresConnectionString()
-	a.Nil(err)
-	a.Equal(`postgres://test_user:test_password@test_host/test_database?sslmode=a+good+one`, str)
-}
-
 // TestConnectionSanityCheck tests if we can connect to the db, a.k.a., if the underlying driver works.
 func TestConnectionSanityCheck(t *testing.T) {
 	assert := assert.New(t)
-	config := NewFromEnv()
-	str, err := config.CreatePostgresConnectionString()
-	assert.Nil(err)
-	_, err = sql.Open("postgres", str)
+	conn := NewFromEnv()
+	str := conn.Config.CreateDSN()
+	_, err := sql.Open("postgres", str)
 	assert.Nil(err)
 }
 

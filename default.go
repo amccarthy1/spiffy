@@ -1,6 +1,8 @@
 package spiffy
 
-import "sync"
+import (
+	"sync"
+)
 
 var (
 	defaultConnection *Connection

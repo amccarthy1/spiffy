@@ -6,8 +6,6 @@ package spiffy
 import (
 	"database/sql"
 	"fmt"
-	"net/url"
-	"os"
 	"sync"
 	"time"
 
@@ -37,6 +35,7 @@ const (
 // New returns a new Connection.
 func New() *Connection {
 	return &Connection{
+		Config:             &Config{},
 		bufferPool:         NewBufferPool(1024),
 		useStatementCache:  false, //doesnt actually help perf, maybe someday.
 		statementCacheLock: &sync.Mutex{},
@@ -44,100 +43,27 @@ func New() *Connection {
 	}
 }
 
-// NewWithHost creates a new Connection using current user peer authentication.
-func NewWithHost(host, dbName string) *Connection {
-	dbc := New()
-	dbc.Host = host
-	dbc.Database = dbName
-	dbc.SSLMode = "disable"
-	return dbc
-}
-
-// NewWithPassword creates a new connection with SSLMode set to "disable"
-func NewWithPassword(host, dbName, username, password string) *Connection {
-	dbc := New()
-	dbc.Host = host
-	dbc.Database = dbName
-	dbc.Username = username
-	dbc.Password = password
-	dbc.SSLMode = "disable"
-	return dbc
-}
-
-// NewWithSSLMode creates a new connection with all available options (including SSLMode)
-func NewWithSSLMode(host, dbName, username, password, sslMode string) *Connection {
-	dbc := New()
-	dbc.Host = host
-	dbc.Database = dbName
-	dbc.Username = username
-	dbc.Password = password
-	dbc.SSLMode = sslMode
-	return dbc
-}
-
-// NewFromDSN creates a new connection with SSLMode set to "disable"
-func NewFromDSN(dsn string) *Connection {
-	dbc := New()
-	dbc.DSN = dsn
-	return dbc
-}
-
-func envVarWithDefault(varName, defaultValue string) string {
-	envVarValue := os.Getenv(varName)
-	if len(envVarValue) > 0 {
-		return envVarValue
+// NewFromConfig returns a new connection from a config.
+func NewFromConfig(cfg *Config) *Connection {
+	return &Connection{
+		Config:             cfg,
+		bufferPool:         NewBufferPool(1024),
+		useStatementCache:  false, //doesnt actually help perf, maybe someday.
+		statementCacheLock: &sync.Mutex{},
+		connectionLock:     &sync.Mutex{},
 	}
-	return defaultValue
 }
 
 // NewFromEnv creates a new db connection from environment variables.
-//
-// The environment variable mappings are as follows:
-//	-	DATABSE_URL 	= DSN 	//note that this trumps other vars (!!)
-// 	-	DB_HOST 		= Host
-//	-	DB_PORT 		= Port
-//	- 	DB_NAME 		= Database
-//	-	DB_SCHEMA		= Schema
-//	-	DB_USER 		= Username
-//	-	DB_PASSWORD 	= Password
-//	-	DB_SSLMODE 		= SSLMode
 func NewFromEnv() *Connection {
-	if len(os.Getenv("DATABASE_URL")) > 0 {
-		return NewFromDSN(os.Getenv("DATABASE_URL"))
-	}
-
-	dbc := New()
-	dbc.Host = envVarWithDefault("DB_HOST", "localhost")
-	dbc.Database = envVarWithDefault("DB_NAME", "postgres")
-	dbc.Schema = os.Getenv("DB_SCHEMA")
-	dbc.Username = os.Getenv("DB_USER")
-	dbc.Password = os.Getenv("DB_PASSWORD")
-	dbc.SSLMode = envVarWithDefault("DB_SSLMODE", "disable")
-	return dbc
+	return NewFromConfig(NewConfigFromEnv())
 }
 
 // Connection is the basic wrapper for connection parameters and saves a reference to the created sql.Connection.
 type Connection struct {
-	// DSN is a fully formed DSN (this skips DSN formation from other variables).
-	DSN string
-
-	// Host is the server to connect to.
-	Host string
-	// Port is the port to connect to.
-	Port string
-	// DBName is the database name
-	Database string
-	// Schema is the application schema within the database, defaults to `public`.
-	Schema string
-	// Username is the username for the connection via password auth.
-	Username string
-	// Password is the password for the connection via password auth.
-	Password string
-	// SSLMode is the sslmode for the connection.
-	SSLMode string
-
 	// Connection is the underlying sql driver connection for the Connection.
 	Connection *sql.DB
+	Config     *Config
 
 	connectionLock     *sync.Mutex
 	statementCacheLock *sync.Mutex
@@ -193,54 +119,26 @@ func (dbc *Connection) DisableStatementCache() {
 	dbc.useStatementCache = false
 }
 
+// WithUseStatementCache returns if we should use the statement cache.
+func (dbc *Connection) WithUseStatementCache(enabled bool) *Connection {
+	dbc.useStatementCache = enabled
+	return dbc
+}
+
 // StatementCache returns the statement cache.
 func (dbc *Connection) StatementCache() *StatementCache {
 	return dbc.statementCache
 }
 
-// CreatePostgresConnectionString returns a sql connection string from a given set of Connection parameters.
-func (dbc *Connection) CreatePostgresConnectionString() (string, error) {
-	if len(dbc.DSN) != 0 {
-		return dbc.DSN, nil
-	}
-
-	if len(dbc.Database) == 0 {
-		return "", exception.New("`DB_NAME` is required to open a new connection")
-	}
-
-	sslMode := "?sslmode=disable"
-	if len(dbc.SSLMode) > 0 {
-		sslMode = fmt.Sprintf("?sslmode=%s", url.QueryEscape(dbc.SSLMode))
-	}
-
-	var portSegment string
-	if len(dbc.Port) > 0 {
-		portSegment = fmt.Sprintf(":%s", dbc.Port)
-	}
-
-	if dbc.Username != "" {
-		if dbc.Password != "" {
-			return fmt.Sprintf("postgres://%s:%s@%s%s/%s%s", url.QueryEscape(dbc.Username), url.QueryEscape(dbc.Password), dbc.Host, portSegment, dbc.Database, sslMode), nil
-		}
-		return fmt.Sprintf("postgres://%s@%s%s/%s%s", url.QueryEscape(dbc.Username), dbc.Host, portSegment, dbc.Database, sslMode), nil
-	}
-	return fmt.Sprintf("postgres://%s%s/%s%s", dbc.Host, portSegment, dbc.Database, sslMode), nil
-}
-
 // openNewSQLConnection returns a new connection object.
 func (dbc *Connection) openNewSQLConnection() (*sql.DB, error) {
-	connStr, err := dbc.CreatePostgresConnectionString()
-	if err != nil {
-		return nil, err
-	}
-
-	dbConn, err := sql.Open("postgres", connStr)
+	dbConn, err := sql.Open("postgres", dbc.Config.CreateDSN())
 	if err != nil {
 		return nil, exception.Wrap(err)
 	}
 
-	if len(dbc.Schema) > 0 {
-		_, err = dbConn.Exec(fmt.Sprintf("SET search_path TO %s,public;", dbc.Schema))
+	if len(dbc.Config.GetSchema()) > 0 {
+		_, err = dbConn.Exec(fmt.Sprintf("SET search_path TO %s,public;", dbc.Config.GetSchema()))
 		if err != nil {
 			return nil, exception.Wrap(err)
 		}
@@ -263,7 +161,7 @@ func (dbc *Connection) Open() (*Connection, error) {
 		if dbc.Connection == nil {
 			newConn, err := dbc.openNewSQLConnection()
 			if err != nil {
-				return nil, exception.Wrap(err)
+				return nil, err
 			}
 			dbc.Connection = newConn
 		}

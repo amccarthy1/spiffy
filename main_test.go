@@ -3,7 +3,6 @@ package spiffy
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"os"
 	"testing"
 	"time"
@@ -19,7 +18,8 @@ import (
 func TestMain(m *testing.M) {
 	err := OpenDefault(NewFromEnv())
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "%+v", err)
+		os.Exit(1)
 	}
 	os.Exit(m.Run())
 }
