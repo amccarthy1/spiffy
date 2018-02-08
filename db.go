@@ -1,6 +1,7 @@
 package spiffy
 
 import (
+	"context"
 	"database/sql"
 
 	exception "github.com/blendlabs/go-exception"
@@ -17,9 +18,21 @@ func NewDB() *DB {
 // used across databases, and don't assume internally which db they talk to.
 type DB struct {
 	conn       *Connection
+	ctx        context.Context
 	tx         *sql.Tx
 	err        error
 	fireEvents bool
+}
+
+// WithCtx sets the db context.
+func (db *DB) WithCtx(ctx context.Context) *DB {
+	db.ctx = ctx
+	return db
+}
+
+// Ctx returns the context on the db.
+func (db *DB) Ctx() context.Context {
+	return db.ctx
 }
 
 // FireEvents returns if events are enabled.
@@ -93,5 +106,5 @@ func (db *DB) Err() error {
 
 // Invoke starts a new invocation.
 func (db *DB) Invoke() *Invocation {
-	return &Invocation{conn: db.conn, tx: db.tx, err: db.err, fireEvents: db.fireEvents}
+	return &Invocation{conn: db.conn, ctx: db.ctx, tx: db.tx, err: db.err, fireEvents: db.fireEvents}
 }

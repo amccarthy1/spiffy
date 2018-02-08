@@ -1,6 +1,7 @@
 package spiffy
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"reflect"
@@ -18,10 +19,22 @@ const (
 // Invocation is a specific operation against a context.
 type Invocation struct {
 	conn           *Connection
+	ctx            context.Context
 	tx             *sql.Tx
 	fireEvents     bool
 	statementLabel string
 	err            error
+}
+
+// WithCtx sets the ctx and returns a reference to the invocation.
+func (i *Invocation) WithCtx(ctx context.Context) *Invocation {
+	i.ctx = ctx
+	return i
+}
+
+// Ctx returns the underlying context.
+func (i *Invocation) Ctx() context.Context {
+	return i.ctx
 }
 
 // FireEvents returns if events are enabled.
@@ -98,7 +111,7 @@ func (i *Invocation) Exec(statement string, args ...interface{}) (err error) {
 
 // Query returns a new query object for a given sql query and arguments.
 func (i *Invocation) Query(query string, args ...interface{}) *Query {
-	return &Query{statement: query, args: args, start: time.Now(), conn: i.conn, tx: i.tx, fireEvents: i.fireEvents, err: i.check(), statementLabel: i.statementLabel}
+	return &Query{statement: query, args: args, start: time.Now(), conn: i.conn, ctx: i.ctx, tx: i.tx, fireEvents: i.fireEvents, err: i.check(), statementLabel: i.statementLabel}
 }
 
 // Get returns a given object based on a group of primary key ids within a transaction.
@@ -165,7 +178,14 @@ func (i *Invocation) Get(object DatabaseMapped, ids ...interface{}) (err error) 
 	}
 	defer i.closeStatement(err, stmt)
 
-	rows, queryErr := stmt.Query(ids...)
+	var rows *sql.Rows
+	var queryErr error
+	if i.ctx != nil {
+		rows, queryErr = stmt.QueryContext(i.ctx, ids...)
+	} else {
+		rows, queryErr = stmt.Query(ids...)
+	}
+
 	if queryErr != nil {
 		err = exception.Wrap(queryErr)
 		i.invalidateCachedStatement()
@@ -241,7 +261,13 @@ func (i *Invocation) GetAll(collection interface{}) (err error) {
 	}
 	defer func() { err = i.closeStatement(err, stmt) }()
 
-	rows, queryErr := stmt.Query()
+	var rows *sql.Rows
+	var queryErr error
+	if i.ctx != nil {
+		rows, queryErr = stmt.QueryContext(i.ctx)
+	} else {
+		rows, queryErr = stmt.Query()
+	}
 	if queryErr != nil {
 		err = exception.Wrap(queryErr)
 		return
@@ -340,8 +366,14 @@ func (i *Invocation) Create(object DatabaseMapped) (err error) {
 	}
 	defer func() { err = i.closeStatement(err, stmt) }()
 
+	var execErr error
 	if serials.Len() == 0 {
-		_, execErr := stmt.Exec(colValues...)
+		if i.ctx != nil {
+			_, execErr = stmt.ExecContext(i.ctx, colValues...)
+		} else {
+			_, execErr = stmt.Exec(colValues...)
+		}
+
 		if execErr != nil {
 			err = exception.Wrap(execErr)
 			i.invalidateCachedStatement()
@@ -351,7 +383,12 @@ func (i *Invocation) Create(object DatabaseMapped) (err error) {
 		serial := serials.FirstOrDefault()
 
 		var id interface{}
-		execErr := stmt.QueryRow(colValues...).Scan(&id)
+		if i.ctx != nil {
+			execErr = stmt.QueryRowContext(i.ctx, colValues...).Scan(&id)
+		} else {
+			execErr = stmt.QueryRow(colValues...).Scan(&id)
+		}
+
 		if execErr != nil {
 			err = exception.Wrap(execErr)
 			return
@@ -439,8 +476,13 @@ func (i *Invocation) CreateIfNotExists(object DatabaseMapped) (err error) {
 	}
 	defer func() { err = i.closeStatement(err, stmt) }()
 
+	var execErr error
 	if serials.Len() == 0 {
-		_, execErr := stmt.Exec(colValues...)
+		if i.ctx != nil {
+			_, execErr = stmt.ExecContext(i.ctx, colValues...)
+		} else {
+			_, execErr = stmt.Exec(colValues...)
+		}
 		if execErr != nil {
 			err = exception.Wrap(execErr)
 			i.invalidateCachedStatement()
@@ -450,7 +492,12 @@ func (i *Invocation) CreateIfNotExists(object DatabaseMapped) (err error) {
 		serial := serials.FirstOrDefault()
 
 		var id interface{}
-		execErr := stmt.QueryRow(colValues...).Scan(&id)
+		if i.ctx != nil {
+			execErr = stmt.QueryRowContext(i.ctx, colValues...).Scan(&id)
+		} else {
+			execErr = stmt.QueryRow(colValues...).Scan(&id)
+		}
+
 		if execErr != nil {
 			err = exception.Wrap(execErr)
 			return
@@ -606,7 +653,12 @@ func (i *Invocation) Update(object DatabaseMapped) (err error) {
 
 	defer func() { err = i.closeStatement(err, stmt) }()
 
-	_, execErr := stmt.Exec(updateValues...)
+	var execErr error
+	if i.ctx != nil {
+		_, execErr = stmt.ExecContext(i.ctx, updateValues...)
+	} else {
+		_, execErr = stmt.Exec(updateValues...)
+	}
 	if execErr != nil {
 		err = exception.Wrap(execErr)
 		i.invalidateCachedStatement()
@@ -668,7 +720,13 @@ func (i *Invocation) Exists(object DatabaseMapped) (exists bool, err error) {
 	defer func() { err = i.closeStatement(err, stmt) }()
 
 	pkValues := pks.ColumnValues(object)
-	rows, queryErr := stmt.Query(pkValues...)
+	var rows *sql.Rows
+	var queryErr error
+	if i.ctx != nil {
+		rows, queryErr = stmt.QueryContext(i.ctx, pkValues...)
+	} else {
+		rows, queryErr = stmt.Query(pkValues...)
+	}
 	defer func() {
 		closeErr := rows.Close()
 		if closeErr != nil {
@@ -739,7 +797,12 @@ func (i *Invocation) Delete(object DatabaseMapped) (err error) {
 
 	pkValues := pks.ColumnValues(object)
 
-	_, execErr := stmt.Exec(pkValues...)
+	var execErr error
+	if i.ctx != nil {
+		_, execErr = stmt.ExecContext(i.ctx, pkValues...)
+	} else {
+		_, execErr = stmt.Exec(pkValues...)
+	}
 	if execErr != nil {
 		err = exception.Wrap(execErr)
 		i.invalidateCachedStatement()
@@ -777,7 +840,14 @@ func (i *Invocation) Truncate(object DatabaseMapped) (err error) {
 		return
 	}
 	defer func() { err = i.closeStatement(err, stmt) }()
-	_, execErr := stmt.Exec()
+
+	var execErr error
+	if i.ctx != nil {
+		_, execErr = stmt.ExecContext(i.ctx)
+	} else {
+		_, execErr = stmt.Exec()
+	}
+
 	if execErr != nil {
 		err = exception.Wrap(execErr)
 		i.invalidateCachedStatement()
@@ -875,9 +945,14 @@ func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 	}
 	defer func() { err = i.closeStatement(err, stmt) }()
 
+	var execErr error
 	if serials.Len() != 0 {
 		var id interface{}
-		execErr := stmt.QueryRow(colValues...).Scan(&id)
+		if i.ctx != nil {
+			execErr = stmt.QueryRowContext(i.ctx, colValues...).Scan(&id)
+		} else {
+			execErr = stmt.QueryRow(colValues...).Scan(&id)
+		}
 		if execErr != nil {
 			err = exception.Wrap(execErr)
 			i.invalidateCachedStatement()
@@ -889,7 +964,11 @@ func (i *Invocation) Upsert(object DatabaseMapped) (err error) {
 			return
 		}
 	} else {
-		_, execErr := stmt.Exec(colValues...)
+		if i.ctx != nil {
+			_, execErr = stmt.ExecContext(i.ctx, colValues...)
+		} else {
+			_, execErr = stmt.Exec(colValues...)
+		}
 		if execErr != nil {
 			err = exception.Wrap(execErr)
 			return

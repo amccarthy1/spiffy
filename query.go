@@ -1,6 +1,7 @@
 package spiffy
 
 import (
+	"context"
 	"database/sql"
 	"reflect"
 	"time"
@@ -24,6 +25,7 @@ type Query struct {
 	stmt       *sql.Stmt
 	fireEvents bool
 	conn       *Connection
+	ctx        context.Context
 	tx         *sql.Tx
 	err        error
 }
@@ -81,7 +83,12 @@ func (q *Query) Execute() (stmt *sql.Stmt, rows *sql.Rows, err error) {
 	}()
 
 	var queryErr error
-	rows, queryErr = stmt.Query(q.args...)
+	if q.ctx != nil {
+		rows, queryErr = stmt.QueryContext(q.ctx, q.args...)
+	} else {
+		rows, queryErr = stmt.Query(q.args...)
+	}
+
 	if queryErr != nil {
 		if q.shouldCacheStatement() {
 			q.conn.statementCache.InvalidateStatement(q.statementLabel)
