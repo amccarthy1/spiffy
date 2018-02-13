@@ -137,6 +137,12 @@ func (dbc *Connection) openNewSQLConnection() (*sql.DB, error) {
 		return nil, exception.Wrap(err)
 	}
 
+	if dbc.Config != nil {
+		dbConn.SetConnMaxLifetime(dbc.Config.GetMaxLifetime())
+		dbConn.SetMaxIdleConns(dbc.Config.GetIdleConnections())
+		dbConn.SetMaxOpenConns(dbc.Config.GetMaxConnections())
+	}
+
 	if len(dbc.Config.GetSchema()) > 0 {
 		_, err = dbConn.Exec(fmt.Sprintf("SET search_path TO %s,public;", dbc.Config.GetSchema()))
 		if err != nil {

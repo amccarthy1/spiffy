@@ -3,6 +3,7 @@ package spiffy
 import (
 	"fmt"
 	"net/url"
+	"time"
 
 	util "github.com/blendlabs/go-util"
 	"github.com/blendlabs/go-util/env"
@@ -42,6 +43,13 @@ const (
 	// SSLModeVerifyFull is an ssl mode.
 	// Postgres Docs: "I want my data encrypted, and I accept the overhead. I want to be sure that I connect to a server I trust, and that it's the one I specify."
 	SSLModeVerifyFull = "verify-full"
+
+	// DefaultIdleConnections is the default number of idle connections.
+	DefaultIdleConnections = 16
+	// DefaultMaxConnections is the default maximum number of connections.
+	DefaultMaxConnections = 256
+	// DefaultMaxLifetime is the default maximum lifetime of driver connections.
+	DefaultMaxLifetime time.Duration = 0
 )
 
 // NewConfig creates a new config.
@@ -83,6 +91,13 @@ type Config struct {
 	Password string `json:"password" yaml:"password" env:"DB_PASSWORD"`
 	// SSLMode is the sslmode for the connection.
 	SSLMode string `json:"sslMode" yaml:"sslMode" env:"DB_SSLMODE"`
+
+	// IdleConnections is the number of idle connections.
+	IdleConnections int `json:"idleConnections" yaml:"idleConnections" env:"DB_IDLE_CONNECTIONS"`
+	// MaxConnections is the maximum number of connections.
+	MaxConnections int `json:"maxConnections" yaml:"maxConnections" env:"DB_MAX_CONNECTIONS"`
+	// MaxLifetime is the maximum time a connection can be open.
+	MaxLifetime time.Duration `json:"maxLifetime" yaml:"maxLifetime" env:"DB_MAX_LIFETIME"`
 }
 
 // WithDSN sets the config dsn and returns a reference to the config.
@@ -172,6 +187,21 @@ func (c Config) GetPassword(inherited ...string) string {
 // GetSSLMode returns the connection ssl mode or a default.
 func (c Config) GetSSLMode(inherited ...string) string {
 	return util.Coalesce.String(c.SSLMode, DefaultSSLMode, inherited...)
+}
+
+// GetIdleConnections returns the number of idle connections or a default.
+func (c Config) GetIdleConnections(inherited ...int) int {
+	return util.Coalesce.Int(c.IdleConnections, DefaultIdleConnections, inherited...)
+}
+
+// GetMaxConnections returns the maximum number of connections or a default.
+func (c Config) GetMaxConnections(inherited ...int) int {
+	return util.Coalesce.Int(c.MaxConnections, DefaultMaxConnections, inherited...)
+}
+
+// GetMaxLifetime returns the maximum lifetime of a driver connection.
+func (c Config) GetMaxLifetime(inherited ...time.Duration) time.Duration {
+	return util.Coalesce.Duration(c.MaxLifetime, DefaultMaxLifetime, inherited...)
 }
 
 // CreateDSN creates a postgres connection string from the config.
