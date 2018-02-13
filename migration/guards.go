@@ -78,8 +78,8 @@ func ColumnNotExists(tableName, columnName string) Guard {
 	}
 }
 
-// ContraintNotExists creates a table on the given connection if it does not exist.
-func ContraintNotExists(constraintName string) Guard {
+// ConstraintNotExists creates a table on the given connection if it does not exist.
+func ConstraintNotExists(constraintName string) Guard {
 	return func(s *Step, c *spiffy.Connection, tx *sql.Tx) error {
 		return guardImpl1(s, verbCreate, nounConstraint, constraintExists, constraintName, c, tx)
 	}
