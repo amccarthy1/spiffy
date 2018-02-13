@@ -36,8 +36,8 @@ const (
 func New() *Connection {
 	return &Connection{
 		Config:             &Config{},
-		bufferPool:         NewBufferPool(1024),
-		useStatementCache:  false, //doesnt actually help perf, maybe someday.
+		bufferPool:         NewBufferPool(DefaultBufferPoolSize),
+		useStatementCache:  DefaultUseStatementCache,
 		statementCacheLock: &sync.Mutex{},
 		connectionLock:     &sync.Mutex{},
 	}
@@ -47,8 +47,8 @@ func New() *Connection {
 func NewFromConfig(cfg *Config) *Connection {
 	return &Connection{
 		Config:             cfg,
-		bufferPool:         NewBufferPool(1024),
-		useStatementCache:  false, //doesnt actually help perf, maybe someday.
+		bufferPool:         NewBufferPool(cfg.GetBufferPoolSize()),
+		useStatementCache:  cfg.GetUseStatementCache(), //doesnt actually help perf, maybe someday.
 		statementCacheLock: &sync.Mutex{},
 		connectionLock:     &sync.Mutex{},
 	}

@@ -44,12 +44,16 @@ const (
 	// Postgres Docs: "I want my data encrypted, and I accept the overhead. I want to be sure that I connect to a server I trust, and that it's the one I specify."
 	SSLModeVerifyFull = "verify-full"
 
+	// DefaultUseStatementCache is the default if we should enable the statement cache.
+	DefaultUseStatementCache = true
 	// DefaultIdleConnections is the default number of idle connections.
 	DefaultIdleConnections = 16
 	// DefaultMaxConnections is the default maximum number of connections.
 	DefaultMaxConnections = 256
 	// DefaultMaxLifetime is the default maximum lifetime of driver connections.
 	DefaultMaxLifetime time.Duration = 0
+	// DefaultBufferPoolSize is the default number of buffer pool entries to maintain.
+	DefaultBufferPoolSize = 1024
 )
 
 // NewConfig creates a new config.
@@ -91,13 +95,16 @@ type Config struct {
 	Password string `json:"password" yaml:"password" env:"DB_PASSWORD"`
 	// SSLMode is the sslmode for the connection.
 	SSLMode string `json:"sslMode" yaml:"sslMode" env:"DB_SSLMODE"`
-
+	// UseStatementCache indicates if we should use the prepared statement cache.
+	UseStatementCache *bool `json:"useStatementCache" yaml:"useStatementCache" env:"DB_USE_STATEMENT_CACHE"`
 	// IdleConnections is the number of idle connections.
 	IdleConnections int `json:"idleConnections" yaml:"idleConnections" env:"DB_IDLE_CONNECTIONS"`
 	// MaxConnections is the maximum number of connections.
 	MaxConnections int `json:"maxConnections" yaml:"maxConnections" env:"DB_MAX_CONNECTIONS"`
 	// MaxLifetime is the maximum time a connection can be open.
 	MaxLifetime time.Duration `json:"maxLifetime" yaml:"maxLifetime" env:"DB_MAX_LIFETIME"`
+	// BufferPoolSize is the number of query composition buffers to maintain.
+	BufferPoolSize int `json:"bufferPoolSize" yaml:"bufferPoolSize" env:"DB_BUFFER_POOL_SIZE"`
 }
 
 // WithDSN sets the config dsn and returns a reference to the config.
@@ -189,6 +196,11 @@ func (c Config) GetSSLMode(inherited ...string) string {
 	return util.Coalesce.String(c.SSLMode, DefaultSSLMode, inherited...)
 }
 
+// GetUseStatementCache returns if we should enable the statement cache or a default.
+func (c Config) GetUseStatementCache(inherited ...bool) bool {
+	return util.Coalesce.Bool(c.UseStatementCache, DefaultUseStatementCache, inherited...)
+}
+
 // GetIdleConnections returns the number of idle connections or a default.
 func (c Config) GetIdleConnections(inherited ...int) int {
 	return util.Coalesce.Int(c.IdleConnections, DefaultIdleConnections, inherited...)
@@ -202,6 +214,11 @@ func (c Config) GetMaxConnections(inherited ...int) int {
 // GetMaxLifetime returns the maximum lifetime of a driver connection.
 func (c Config) GetMaxLifetime(inherited ...time.Duration) time.Duration {
 	return util.Coalesce.Duration(c.MaxLifetime, DefaultMaxLifetime, inherited...)
+}
+
+// GetBufferPoolSize returns the number of query buffers to maintain or a default.
+func (c Config) GetBufferPoolSize(inherited ...int) int {
+	return util.Coalesce.Int(c.BufferPoolSize, DefaultBufferPoolSize, inherited...)
 }
 
 // CreateDSN creates a postgres connection string from the config.
