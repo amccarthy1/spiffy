@@ -49,7 +49,7 @@ const (
 	// DefaultIdleConnections is the default number of idle connections.
 	DefaultIdleConnections = 16
 	// DefaultMaxConnections is the default maximum number of connections.
-	DefaultMaxConnections = 256
+	DefaultMaxConnections = 32
 	// DefaultMaxLifetime is the default maximum lifetime of driver connections.
 	DefaultMaxLifetime time.Duration = 0
 	// DefaultBufferPoolSize is the default number of buffer pool entries to maintain.
